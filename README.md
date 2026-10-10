@@ -155,4 +155,4 @@ python scripts/build_static_demo.py
 
 ## Credits
 
-Search data by [SerpApi](https://serpapi.com). Development assisted by Claude (Anthropic). All demo companies, stores and people are fictional.
+Search data by [SerpApi](https://serpapi.com). All demo companies, stores and people are fictional.

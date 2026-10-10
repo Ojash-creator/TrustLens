@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TrustLens: check before you trust</title>
+  <meta name="description" content="Paste a job offer, a shop link or a business name. TrustLens searches live Google data through SerpApi and shows the evidence behind every verdict.">
+  <meta name="theme-color" content="#F3F6FB">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='14' cy='14' r='10' fill='none' stroke='%232B47E0' stroke-width='3'/%3E%3Cpath d='M9.5 14.5l3 3 5.5-6' fill='none' stroke='%232B47E0' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M22 22l6 6' stroke='%232B47E0' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip" href="#checker">Skip to the checker</a>
+
+  <header class="topbar">
+    <div class="wrap topbar-in">
+      <a class="brand" href="#top" aria-label="TrustLens home">
+        <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="14" cy="14" r="10" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9.5 14.5l3 3 5.5-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 22l6 6" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg>
+        <span>TrustLens</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#checker">Check</a>
+        <a href="#cases">Recorded cases</a>
+        <a href="#how">How it works</a>
+        <a href="#scoring">Scoring</a>
+        <a href="#history">History</a>
+      </nav>
+      <div id="modePill" class="mode-pill" role="status" aria-live="polite">
+        <span class="dot"></span><span class="txt">Connecting</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap">
+      <div class="hero-main">
+        <h1>Check before you trust.</h1>
+        <p class="lede">Got a job offer on WhatsApp, a shop link from an ad, or a coaching centre asking for the full fee? Paste it here. TrustLens searches live Google data and shows the evidence behind every verdict.</p>
+
+        <form id="checker" class="form-sheet" autocomplete="off" novalidate>
+          <div class="tabs" role="tablist" aria-label="What do you want to check?" id="modeTabs"></div>
+          <div id="modeIntro" class="mode-intro"></div>
+          <div id="fields" class="fields"></div>
+          <div class="sample-row" id="quickSamples"></div>
+          <div id="formError" class="form-error" role="alert" hidden></div>
+          <div class="submit-row">
+            <button type="submit" class="btn primary" id="runBtn"><span class="btn-label">Run the check</span></button>
+            <label class="switch" id="demoSwitchWrap" hidden>
+              <input type="checkbox" id="demoSwitch"><span class="track"></span><span class="switch-text">Use recorded demo data</span>
+            </label>
+            <span class="cost" id="costNote">Uses about 4 to 6 searches</span>
+          </div>
+        </form>
+      </div>
+
+      <aside class="specimen-wrap" aria-label="Example of a message scan">
+        <figure class="specimen" id="specimen">
+          <figcaption>A forwarded message, scanned</figcaption>
+          <p class="bubble" id="specimenText"></p>
+          <div class="specimen-foot">
+            <div class="mini-read"><span class="mini-num">3</span><span class="mini-of">out of 100</span></div>
+            <div class="mini-stamp">High risk</div>
+          </div>
+        </figure>
+        <p class="specimen-note">Yellow marks are phrases TrustLens recognises from real job scams. Every mark comes with a plain-English reason.</p>
+      </aside>
+    </section>
+
+    <section class="sources" aria-labelledby="sourcesH">
+      <div class="wrap">
+        <h2 id="sourcesH">Where the evidence comes from</h2>
+        <p class="section-lede">Six SerpApi engines, each answering one plain question about whoever is asking for your trust.</p>
+        <ul class="source-list" id="sourceList"></ul>
+      </div>
+    </section>
+
+    <section id="report" class="report wrap" hidden aria-live="polite">
+      <div id="traceMount"></div>
+      <div id="sheetMount"></div>
+    </section>
+
+    <section id="cases" class="cases wrap">
+      <h2>Simulate it without an API key</h2>
+      <p class="section-lede">Eight recorded cases run through the same engine as a live check. All names are fictional. Pick one to watch TrustLens work.</p>
+      <div id="caseList" class="case-list"></div>
+    </section>
+
+    <section id="how" class="how wrap">
+      <h2>How a check works</h2>
+      <ol class="steps" id="howSteps"></ol>
+    </section>
+
+    <section id="scoring" class="scoring wrap">
+      <h2>How the score is built</h2>
+      <p class="section-lede">No black box. Every check starts at 50, each finding moves the score by a fixed amount, and you can see every move in the report.</p>
+      <div class="tabs small" role="tablist" aria-label="Scoring by check type" id="scoreTabs"></div>
+      <div class="table-scroll"><table class="score-table" id="scoreTable"></table></div>
+      <div class="rules" id="scoreRules"></div>
+    </section>
+
+    <section id="history" class="history wrap">
+      <div class="history-head"><h2>Your recent checks</h2><button class="btn quiet" id="clearHistory" hidden>Clear history</button></div>
+      <p class="section-lede">Saved only in this browser. Nothing is uploaded.</p>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-in">
+      <p><strong>TrustLens</strong> was built for the SerpApi India Hackathon 2026. Verdicts are advisory: they summarise public search evidence and are not a legal finding about any business.</p>
+      <p>If you have already paid a scammer in India, call <strong>1930</strong> or report at cybercrime.gov.in. For consumer complaints, call the National Consumer Helpline on <strong>1915</strong>.</p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">TrustLens needs JavaScript to run checks.</p></noscript>
+
+  <script src="js/demo_reports.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

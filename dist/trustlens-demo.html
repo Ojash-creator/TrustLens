@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TrustLens: check before you trust</title>
+  <meta name="description" content="Paste a job offer, a shop link or a business name. TrustLens searches live Google data through SerpApi and shows the evidence behind every verdict.">
+  <meta name="theme-color" content="#F3F6FB">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='14' cy='14' r='10' fill='none' stroke='%232B47E0' stroke-width='3'/%3E%3Cpath d='M9.5 14.5l3 3 5.5-6' fill='none' stroke='%232B47E0' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M22 22l6 6' stroke='%232B47E0' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --paper: #F3F6FB; --sheet: #FFFFFF; --ink: #0F2140; --ink-2: #4A5B76; --ink-3: #6F7E94;
+  --rule: #DCE3EE; --rule-2: #C6D1E1; --brand: #2B47E0; --brand-ink: #1E33B5; --brand-soft: #E9EDFD;
+  --pass: #0F7B5A; --pass-bg: #E2F4EC; --warn: #935100; --warn-bg: #FFF0D2;
+  --fail: #C4262E; --fail-bg: #FDE7E8; --info: #2B47E0; --info-bg: #E9EDFD; --unk: #5F6E84; --unk-bg: #ECEFF4;
+  --mark: #FFE66D;
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Public Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --r-sheet: 6px; --r-field: 8px; --r-pill: 999px; --wrap: 1180px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; scroll-padding-top: 84px; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.6 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; letter-spacing: -0.02em; line-height: 1.08; }
+p { margin: 0; } a { color: var(--brand-ink); text-underline-offset: 3px; } a:hover { color: var(--brand); }
+button, input, select, textarea { font: inherit; color: inherit; } button { cursor: pointer; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+svg.ic { width: 1.15em; height: 1.15em; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+.wrap { width: min(var(--wrap), 100% - 48px); margin-inline: auto; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: #fff; padding: 8px 14px; z-index: 100; border-radius: 6px; }
+.skip:focus { left: 8px; }
+.noscript { padding: 16px; text-align: center; background: var(--warn-bg); }
+.topbar { position: sticky; top: 0; z-index: 50; background: rgba(243,246,251,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
+.topbar-in { display: flex; align-items: center; gap: 12px; height: 64px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; color: var(--brand); text-decoration: none; font: 700 20px/1 var(--font-display); letter-spacing: -0.03em; }
+.brand span { color: var(--ink); }
+.nav { display: flex; gap: 22px; margin-left: 20px; }
+.nav a { color: var(--ink-2); text-decoration: none; font-weight: 500; font-size: 15px; padding: 6px 2px; border-bottom: 2px solid transparent; }
+.nav a:hover { color: var(--ink); border-bottom-color: var(--brand); }
+.mode-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: var(--r-pill); background: var(--unk-bg); color: var(--unk); font-size: 13px; font-weight: 600; white-space: nowrap; margin-left: auto; min-width: 0; }
+.mode-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.mode-pill .txt { overflow: hidden; text-overflow: ellipsis; }
+.mode-pill.live { background: var(--pass-bg); color: var(--pass); }
+.mode-pill.demo { background: var(--warn-bg); color: var(--warn); }
+.mode-pill.static { background: var(--brand-soft); color: var(--brand-ink); }
+.hero-main { min-width: 0; }
+.hero { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: 64px; padding: 64px 0 56px; align-items: start; }
+h1 { font-size: clamp(44px, 6.2vw, 78px); font-weight: 700; line-height: .98; letter-spacing: -0.035em; max-width: 12ch; }
+.lede { margin: 22px 0 32px; font-size: 18px; line-height: 1.55; color: var(--ink-2); max-width: 54ch; }
+.form-sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-sheet); padding: 0 0 24px; box-shadow: 0 1px 0 var(--rule); }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule); overflow-x: auto; scrollbar-width: none; }
+.tab { display: inline-flex; align-items: center; gap: 8px; padding: 15px 20px 13px; background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; color: var(--ink-3); font-weight: 600; font-size: 15px; white-space: nowrap; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--brand-ink); border-bottom-color: var(--brand); }
+.tabs.small .tab { padding: 10px 16px 9px; font-size: 14px; }
+.mode-intro { padding: 20px 24px 4px; color: var(--ink-2); font-size: 15px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; padding: 16px 24px 4px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.field label { font-weight: 600; font-size: 14px; }
+.field .opt { font-weight: 400; color: var(--ink-3); }
+.field input, .field textarea { width: 100%; padding: 11px 13px; background: #fff; border: 1px solid var(--rule-2); border-radius: var(--r-field); transition: border-color .15s, box-shadow .15s; }
+.field textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
+.field input::placeholder, .field textarea::placeholder { color: #9AA7BA; }
+.field input:hover, .field textarea:hover { border-color: #9FB0C9; }
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.field .hint { font-size: 13px; color: var(--ink-3); }
+.sample-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 18px 24px 0; }
+.sample-row .lbl { font-size: 14px; color: var(--ink-2); margin-right: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--brand-soft); color: var(--brand-ink); border: 1px solid transparent; border-radius: var(--r-pill); font-size: 14px; font-weight: 500; }
+.chip:hover { border-color: var(--brand); }
+.chip.active { background: var(--brand); color: #fff; }
+.form-error { margin: 16px 24px 0; padding: 11px 14px; background: var(--fail-bg); color: #8C1A20; border-left: 4px solid var(--fail); border-radius: 4px; font-size: 14.5px; }
+.submit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding: 20px 24px 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: var(--r-field); border: 1px solid var(--rule-2); background: #fff; font-weight: 600; font-size: 15px; transition: background .15s, border-color .15s, transform .05s; }
+.btn:hover { border-color: var(--ink-3); } .btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; padding: 13px 26px; font-size: 16px; }
+.btn.primary:hover { background: var(--brand-ink); border-color: var(--brand-ink); }
+.btn.primary[disabled] { opacity: .7; cursor: progress; }
+.btn.quiet { background: transparent; color: var(--ink-2); } .btn.small { padding: 8px 14px; font-size: 14px; }
+.cost { color: var(--ink-3); font-size: 14px; margin-left: auto; }
+.switch { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.switch input { position: absolute; opacity: 0; }
+.switch .track { width: 38px; height: 22px; background: var(--rule-2); border-radius: var(--r-pill); position: relative; transition: background .2s; }
+.switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform .2s; }
+.switch input:checked + .track { background: var(--brand); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.specimen-wrap { position: sticky; top: 96px; padding-top: 12px; }
+.specimen { margin: 0; background: #fff; border: 1px solid var(--rule); border-radius: 4px; padding: 22px 24px 20px; transform: rotate(1.6deg); box-shadow: 0 18px 40px -18px rgba(15,33,64,.28), 0 2px 0 var(--rule); }
+.specimen figcaption { font: 600 14px/1 var(--font-body); color: var(--ink-3); padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px dashed var(--rule-2); }
+.bubble { font-size: 17px; line-height: 2.05; color: var(--ink); }
+.hl { background: linear-gradient(var(--mark), var(--mark)) no-repeat left center / 0% 88%; padding: 1px 2px; border-radius: 2px; }
+.hl.on { background-size: 100% 88%; transition: background-size .55s cubic-bezier(.3,.6,.2,1); }
+.hl-tag { display: inline-block; margin: 0 3px 0 5px; padding: 1px 8px; border-radius: var(--r-pill); background: var(--fail-bg); color: #8C1A20; font: 600 12.5px/1.6 var(--font-body); opacity: 0; transform: translateY(3px); transition: opacity .3s, transform .3s; vertical-align: 2px; }
+.hl-tag.on { opacity: 1; transform: none; }
+.specimen-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--rule-2); }
+.mini-read { display: flex; align-items: baseline; gap: 8px; }
+.mini-num { font: 700 44px/1 var(--font-display); color: var(--fail); letter-spacing: -0.03em; }
+.mini-of { font-size: 14px; color: var(--ink-3); }
+.mini-stamp { font: 800 15px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--fail); border: 2.5px double var(--fail); padding: 9px 14px 8px; border-radius: 5px; transform: rotate(-5deg) scale(1.5); opacity: 0; }
+.mini-stamp.on { opacity: .95; transform: rotate(-5deg) scale(1); transition: transform .28s cubic-bezier(.2,1.4,.4,1), opacity .12s; }
+.specimen-note { margin: 22px 8px 0 12px; font-size: 14px; color: var(--ink-2); max-width: 44ch; }
+.sources { background: var(--sheet); border-block: 1px solid var(--rule); padding: 48px 0 52px; }
+h2 { font-size: clamp(28px, 3.4vw, 40px); font-weight: 700; }
+.section-lede { margin-top: 12px; color: var(--ink-2); max-width: 62ch; font-size: 17px; }
+.source-list { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; margin-top: 30px; border-top: 1px solid var(--rule); }
+.source-list li { display: grid; grid-template-columns: 34px 1fr; gap: 4px 12px; padding: 20px 24px 20px 0; border-bottom: 1px solid var(--rule); }
+.source-list li:nth-child(3n+2), .source-list li:nth-child(3n) { padding-left: 24px; border-left: 1px solid var(--rule); }
+.source-list .src-ic { grid-row: 1/3; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; background: var(--brand-soft); color: var(--brand-ink); font-size: 18px; }
+.source-list h3 { font-size: 18px; letter-spacing: -0.01em; align-self: end; }
+.source-list p { color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+.report { padding: 56px 0 24px; scroll-margin-top: 76px; }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-sheet); }
+.trace { margin-bottom: 28px; }
+.trace-head { display: flex; align-items: center; gap: 14px; padding: 18px 24px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.trace-head h3 { font-size: 20px; } .trace-head .sub { color: var(--ink-3); font-size: 14px; }
+.trace-list { padding: 6px 0; }
+.trace-row { display: grid; grid-template-columns: 148px minmax(0,1fr) auto; gap: 6px 18px; align-items: center; padding: 11px 24px; border-bottom: 1px solid #EEF2F8; }
+.trace-row:last-child { border-bottom: 0; }
+.eng { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: var(--ink); }
+.eng .ic { color: var(--brand); }
+.q { font: 400 13.5px/1.45 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
+.t-meta { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); white-space: nowrap; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; background: var(--brand-soft); color: var(--brand-ink); }
+.tag.fu { background: var(--warn-bg); color: var(--warn); } .tag.cache { background: var(--unk-bg); color: var(--unk); }
+.spin { width: 16px; height: 16px; border: 2.5px solid var(--brand-soft); border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.trace-row.pending .q, .trace-row.pending .eng { opacity: .55; }
+.trace-row.done { animation: rowIn .25s ease-out; }
+@keyframes rowIn { from { background: var(--brand-soft); } to { background: transparent; } }
+.trace-foot { padding: 12px 24px 16px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 14px; }
+.sheet { padding: 0; overflow: hidden; } .sheet:focus { outline: none; }
+.sheet-head { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: baseline; padding: 16px 32px; background: #F8FAFD; border-bottom: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
+.sheet-head strong { color: var(--ink); font-weight: 600; } .sheet-head .grow { margin-left: auto; }
+.banner { margin: 0; padding: 10px 32px; background: var(--warn-bg); color: var(--warn); font-size: 14px; border-bottom: 1px solid #F1DDAF; }
+.reading { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 24px 44px; align-items: center; padding: 36px 32px 8px; }
+.score-num { font: 700 clamp(84px,11vw,132px)/.85 var(--font-display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.score-of { margin-top: 8px; font-size: 14px; color: var(--ink-3); }
+.score-num.high_risk { color: var(--fail); } .score-num.caution { color: var(--warn); }
+.score-num.trustworthy { color: var(--pass); } .score-num.insufficient { color: var(--unk); }
+.range { padding-top: 34px; }
+.range-bar { position: relative; height: 14px; border-radius: 3px; display: flex; overflow: visible; }
+.range-bar .z1 { width: 45%; background: #F6C9CB; border-radius: 3px 0 0 3px; } .range-bar .z2 { width: 27%; background: #FBE1A6; }
+.range-bar .z3 { width: 28%; background: #B8E3D0; border-radius: 0 3px 3px 0; }
+.marker { position: absolute; top: -12px; left: 0; width: 0; transition: left 1.1s cubic-bezier(.2,.8,.2,1); }
+.marker::before { content: ""; position: absolute; left: -2px; top: 10px; width: 4px; height: 36px; background: var(--ink); border-radius: 2px; }
+.marker::after { content: ""; position: absolute; left: -8px; top: 0; border: 8px solid transparent; border-top: 11px solid var(--ink); border-bottom: 0; }
+.range-labels { display: flex; margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+.range-labels .l1 { width: 45%; } .range-labels .l2 { width: 27%; } .range-labels .l3 { width: 28%; text-align: right; }
+.stamp { font: 800 clamp(17px,1.8vw,22px)/1.1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; text-align: center; padding: 14px 24px 12px; border: 4px double currentColor; border-radius: 8px; transform: rotate(-4deg); opacity: 0; width: max-content; max-width: 250px; }
+.stamp.land { animation: thunk .42s cubic-bezier(.2,1.3,.4,1) .95s forwards; }
+@keyframes thunk { 0% { opacity: 0; transform: rotate(-4deg) scale(1.9); } 60% { opacity: .95; transform: rotate(-4deg) scale(.96); } 100% { opacity: .95; transform: rotate(-4deg) scale(1); } }
+.stamp.high_risk { color: var(--fail); } .stamp.caution { color: var(--warn); }
+.stamp.trustworthy { color: var(--pass); } .stamp.insufficient { color: var(--unk); }
+.verdict-copy { padding: 26px 32px 6px; max-width: 900px; }
+.headline { font: 700 clamp(24px,3vw,34px)/1.15 var(--font-display); letter-spacing: -0.02em; }
+.summary { margin-top: 12px; font-size: 17px; color: var(--ink-2); line-height: 1.6; max-width: 72ch; }
+.src-note { margin-top: 8px; font-size: 13px; color: var(--ink-3); }
+.meta-row { display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: center; padding: 22px 32px 26px; }
+.cov { display: flex; align-items: center; gap: 12px; }
+.cov-bar { width: 150px; height: 8px; background: var(--unk-bg); border-radius: 4px; overflow: hidden; }
+.cov-bar i { display: block; height: 100%; background: var(--brand); border-radius: 4px; }
+.cov-t { font-size: 14px; color: var(--ink-2); }
+.counts { display: flex; flex-wrap: wrap; gap: 8px; }
+.count { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: var(--r-pill); font-size: 13.5px; font-weight: 600; }
+.count.fail { background: var(--fail-bg); color: #8C1A20; } .count.warn { background: var(--warn-bg); color: var(--warn); }
+.count.pass { background: var(--pass-bg); color: var(--pass); } .count.unknown { background: var(--unk-bg); color: var(--unk); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.block { padding: 30px 32px; border-top: 1px solid var(--rule); }
+.block > h3 { font-size: 24px; }
+.block > .sub { margin-top: 6px; color: var(--ink-2); font-size: 15px; max-width: 70ch; }
+.wf { margin-top: 22px; display: grid; gap: 0; }
+.wf-row { display: grid; grid-template-columns: minmax(150px,230px) minmax(0,1fr) 54px; align-items: center; gap: 16px; padding: 9px 0; border-bottom: 1px solid #EEF2F8; font-size: 15px; }
+.wf-row:last-child { border-bottom: 0; }
+.wf-track { position: relative; height: 22px; }
+.wf-track::before { content: ""; position: absolute; left: 50%; top: -9px; bottom: -9px; width: 1px; background: var(--rule-2); }
+.wf-bar { position: absolute; top: 3px; height: 16px; border-radius: 3px; width: 0; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.wf-bar.pos { left: 50%; background: #5DBB99; } .wf-bar.neg { right: 50%; background: #E9787E; }
+.wf-val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wf-val.pos { color: var(--pass); } .wf-val.neg { color: var(--fail); }
+.wf-axis { display: grid; grid-template-columns: minmax(150px,230px) 1fr 54px; gap: 16px; margin-top: 4px; font-size: 13px; color: var(--ink-3); }
+.wf-axis .mid { display: flex; justify-content: space-between; }
+.wf-total { margin-top: 12px; padding-top: 14px; border-top: 2px solid var(--ink); display: flex; justify-content: space-between; font-weight: 600; }
+.wf-total b { font: 700 22px/1 var(--font-display); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.filter { padding: 6px 14px; border: 1px solid var(--rule-2); background: #fff; border-radius: var(--r-pill); font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.filter[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.ledger { margin-top: 12px; }
+.group-title { padding: 22px 0 8px; font: 700 15px/1 var(--font-display); color: var(--ink-3); }
+.row { border-top: 1px solid var(--rule); } .row:last-child { border-bottom: 1px solid var(--rule); }
+.row-btn { width: 100%; display: grid; grid-template-columns: 38px minmax(0,1fr) auto 64px 20px; gap: 6px 16px; align-items: center; text-align: left; padding: 16px 4px; background: none; border: 0; }
+.row-btn:hover { background: #F8FAFD; }
+.glyph { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; }
+.glyph.pass { background: var(--pass-bg); color: var(--pass); } .glyph.warn { background: var(--warn-bg); color: var(--warn); }
+.glyph.fail { background: var(--fail-bg); color: var(--fail); } .glyph.info { background: var(--info-bg); color: var(--info); }
+.glyph.unknown { background: var(--unk-bg); color: var(--unk); }
+.row-title { font-weight: 600; font-size: 16px; }
+.row-find { color: var(--ink-2); font-size: 15px; margin-top: 2px; }
+.row-src { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.src-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: var(--r-pill); background: var(--unk-bg); color: var(--ink-2); font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.impact { text-align: right; font: 700 18px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.impact.pos { color: var(--pass); } .impact.neg { color: var(--fail); } .impact.zero { color: var(--ink-3); }
+.chev { color: var(--ink-3); transition: transform .2s; }
+.row-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.row-body { padding: 2px 4px 20px 58px; display: none; } .row-body.open { display: block; }
+.row-body .why { color: var(--ink-2); max-width: 74ch; font-size: 15px; }
+.ev { margin-top: 14px; border-left: 3px solid var(--rule-2); padding-left: 16px; display: grid; gap: 8px; }
+.ev-row { display: grid; grid-template-columns: minmax(120px,210px) minmax(0,1fr); gap: 4px 16px; font-size: 14.5px; }
+.ev-row dt { color: var(--ink-3); } .ev-row dd { margin: 0; overflow-wrap: anywhere; }
+.crit-note { display: inline-flex; margin-left: 8px; padding: 1px 8px; border-radius: var(--r-pill); background: var(--fail); color: #fff; font-size: 12px; font-weight: 700; vertical-align: 2px; }
+.ev-tabs { margin-top: 18px; } .panel { padding-top: 22px; }
+.place { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 24px 40px; }
+.place h4 { font-size: 26px; }
+.stars { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-weight: 600; }
+.stars .s { color: #E0A100; letter-spacing: 2px; font-size: 17px; }
+.kv { display: grid; gap: 10px; align-content: start; }
+.kv div { display: grid; grid-template-columns: 96px 1fr; gap: 12px; font-size: 15px; }
+.kv dt { color: var(--ink-3); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.near { margin-top: 16px; padding: 12px 14px; background: var(--unk-bg); border-radius: 6px; font-size: 14.5px; color: var(--ink-2); }
+.list { display: grid; gap: 0; }
+.item { padding: 16px 0; border-top: 1px solid var(--rule); display: grid; gap: 6px; }
+.item:first-child { border-top: 0; padding-top: 0; }
+.item-title { font-weight: 600; font-size: 16px; }
+.item-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13.5px; color: var(--ink-3); }
+.item-snip { color: var(--ink-2); font-size: 15px; max-width: 80ch; }
+.item mark, .item-snip mark { background: var(--mark); padding: 0 2px; border-radius: 2px; color: var(--ink); }
+.flagchip { display: inline-block; padding: 1px 9px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 700; }
+.flagchip.strong, .flagchip.negative { background: var(--fail-bg); color: #8C1A20; } .flagchip.weak { background: var(--warn-bg); color: var(--warn); }
+.flagchip.official, .flagchip.positive, .flagchip.match { background: var(--pass-bg); color: var(--pass); }
+.fake-link { color: var(--brand-ink); text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.xray-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: 28px 40px; align-items: start; }
+.xray-bubble { background: #F4F7FC; border: 1px solid var(--rule); border-radius: 4px 16px 16px 16px; padding: 18px 20px; font-size: 16px; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.xray-bubble .hl { background: var(--mark); padding: 1px 3px; } .xray-bubble .hl.medium { background: #FFE9A8; } .xray-bubble .hl.low { background: #FFF3CF; }
+.xray-flags { display: grid; gap: 14px; }
+.xf { padding-left: 14px; border-left: 4px solid var(--warn); } .xf.high { border-left-color: var(--fail); } .xf.low { border-left-color: var(--rule-2); }
+.xf b { display: block; font-size: 15.5px; } .xf span { display: block; font-size: 14.5px; color: var(--ink-2); margin-top: 2px; }
+.xf i { display: block; margin-top: 4px; font-style: normal; font: 500 13px/1.4 var(--font-mono); color: var(--ink-3); }
+.empty-note { color: var(--ink-3); font-size: 15px; }
+.chart { width: 100%; height: auto; display: block; margin-top: 8px; } .chart text { font-family: var(--font-body); fill: var(--ink-2); }
+.chart .lbl-strong { font-weight: 700; fill: var(--ink); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+.chart-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
+.next { display: grid; gap: 0; margin-top: 16px; }
+.next-item { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 4px 14px; padding: 14px 0; border-top: 1px solid var(--rule); }
+.next-item:first-child { border-top: 0; }
+.next-item input { width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--brand); }
+.next-item b { font-size: 16px; } .next-item p { color: var(--ink-2); font-size: 15px; margin-top: 2px; max-width: 72ch; }
+.next-item input:checked ~ div b { text-decoration: line-through; color: var(--ink-3); }
+.report-where { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 12px 36px; padding: 14px 16px; background: #F4F7FC; border-radius: 6px; font-size: 15px; }
+.report-where b { font-family: var(--font-display); font-size: 20px; margin-right: 6px; }
+.cases, .how, .scoring, .history { padding: 72px 0 8px; }
+.case-list { margin-top: 28px; border-top: 1px solid var(--rule-2); }
+.case { display: grid; grid-template-columns: 40px minmax(0,1fr) 250px auto; gap: 6px 22px; align-items: center; padding: 18px 4px; border-bottom: 1px solid var(--rule); }
+.case:hover { background: #fff; }
+.case .m-ic { width: 40px; height: 40px; border-radius: 10px; background: var(--brand-soft); color: var(--brand-ink); display: grid; place-items: center; font-size: 19px; }
+.case h3 { font-size: 19px; letter-spacing: -0.01em; } .case p { color: var(--ink-2); font-size: 15px; margin-top: 3px; }
+.outcome { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.outcome i { width: 10px; height: 10px; border-radius: 50%; background: var(--unk); }
+.outcome.high_risk i { background: var(--fail); } .outcome.caution i { background: #D98A00; }
+.outcome.trustworthy i { background: var(--pass); } .outcome.insufficient i { background: var(--unk); }
+.steps { margin-top: 30px; display: grid; grid-template-columns: repeat(4,1fr); gap: 0; counter-reset: s; border-top: 1px solid var(--rule-2); }
+.steps li { counter-increment: s; padding: 24px 24px 8px 0; }
+.steps li + li { padding-left: 24px; border-left: 1px solid var(--rule); }
+.steps li::before { content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: #fff; font: 700 16px/1 var(--font-display); margin-bottom: 16px; }
+.steps h3 { font-size: 20px; } .steps p { margin-top: 8px; color: var(--ink-2); font-size: 15px; }
+.scoring .tabs { margin-top: 22px; background: transparent; }
+.table-scroll { overflow-x: auto; margin-top: 4px; }
+.score-table { width: 100%; border-collapse: collapse; background: var(--sheet); border: 1px solid var(--rule); border-top: 0; font-size: 15px; min-width: 640px; }
+.score-table th { text-align: left; padding: 12px 16px; font-size: 13.5px; color: var(--ink-3); font-weight: 600; border-bottom: 1px solid var(--rule); background: #F8FAFD; }
+.score-table td { padding: 13px 16px; border-bottom: 1px solid #EEF2F8; vertical-align: top; }
+.score-table td.n { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.score-table td.n.pos { color: var(--pass); } .score-table td.n.neg { color: var(--fail); }
+.rules { margin-top: 26px; display: grid; grid-template-columns: repeat(3,1fr); gap: 0; border-top: 1px solid var(--rule-2); }
+.rules > div { padding: 18px 24px 4px 0; } .rules > div + div { padding-left: 24px; border-left: 1px solid var(--rule); }
+.rules h4 { font-size: 17px; } .rules p { margin-top: 6px; color: var(--ink-2); font-size: 14.5px; }
+.history-head { display: flex; align-items: center; gap: 16px; }
+.history-list { margin-top: 24px; border-top: 1px solid var(--rule-2); min-height: 20px; }
+.h-row { display: grid; grid-template-columns: 62px minmax(0,1fr) auto auto; gap: 16px; align-items: center; padding: 14px 4px; border-bottom: 1px solid var(--rule); }
+.h-score { font: 700 30px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.h-score.high_risk { color: var(--fail); } .h-score.caution { color: var(--warn); } .h-score.trustworthy { color: var(--pass); } .h-score.insufficient { color: var(--unk); }
+.h-row b { display: block; font-size: 16px; } .h-row span.sm { color: var(--ink-3); font-size: 14px; }
+.empty { padding: 26px 4px; color: var(--ink-3); }
+.foot { margin-top: 88px; padding: 34px 0 44px; border-top: 1px solid var(--rule); background: var(--sheet); color: var(--ink-2); font-size: 14.5px; }
+.foot-in { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 48px; }
+.toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%,20px); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 8px; font-size: 14.5px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 90; }
+.toast.on { opacity: 1; transform: translate(-50%,0); }
+@media (max-width: 1000px) {
+  .hero { grid-template-columns: minmax(0,1fr); gap: 36px; padding-top: 40px; }
+  .specimen-wrap { position: static; order: 2; max-width: 560px; }
+  .nav { display: none; }
+  .source-list { grid-template-columns: 1fr 1fr; }
+  .source-list li, .source-list li:nth-child(3n+2), .source-list li:nth-child(3n) { padding: 20px 16px 20px 0; border-left: 0; }
+  .source-list li:nth-child(even) { padding-left: 20px; border-left: 1px solid var(--rule); }
+  .steps { grid-template-columns: 1fr 1fr; } .steps li:nth-child(3) { border-left: 0; padding-left: 0; }
+  .rules { grid-template-columns: 1fr; }
+  .rules > div, .rules > div + div { padding: 16px 0; border-left: 0; border-bottom: 1px solid var(--rule); }
+  .reading { grid-template-columns: 1fr; gap: 8px; }
+  .stamp { justify-self: start; margin-top: 20px; }
+  .place, .xray-grid { grid-template-columns: 1fr; }
+  .foot-in { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .wrap { width: calc(100% - 32px); }
+  .mode-pill { max-width: calc(100vw - 190px); min-width: 0; }
+  .mode-pill .txt { min-width: 0; white-space: nowrap; }
+  .brand { font-size: 19px; } .topbar-in { gap: 12px; }
+  .fields { grid-template-columns: 1fr; padding-inline: 18px; }
+  .mode-intro, .sample-row, .submit-row { padding-inline: 18px; }
+  .form-error { margin-inline: 18px; } .tab { padding: 14px 14px 12px; } .cost { margin-left: 0; }
+  .source-list { grid-template-columns: 1fr; } .source-list li:nth-child(even) { padding-left: 0; border-left: 0; }
+  .steps { grid-template-columns: 1fr; } .steps li + li { padding-left: 0; border-left: 0; }
+  .trace-row { grid-template-columns: 1fr; padding-inline: 18px; }
+  .trace-head { padding-inline: 18px; flex-wrap: wrap; }
+  .sheet-head, .reading, .verdict-copy, .meta-row, .block, .banner { padding-inline: 18px; }
+  .actions { margin-left: 0; }
+  .wf-row, .wf-axis { grid-template-columns: 1fr 54px; }
+  .wf-track { grid-column: 1/-1; grid-row: 2; } .wf-axis .mid { grid-column: 1/-1; }
+  .wf-axis > :first-child, .wf-axis > :last-child { display: none; }
+  .row-btn { grid-template-columns: 34px minmax(0,1fr) 54px 18px; } .row-src { display: none; }
+  .row-body { padding-left: 4px; } .ev-row { grid-template-columns: 1fr; }
+  .case { grid-template-columns: 40px minmax(0,1fr); } .case .outcome, .case .btn { grid-column: 2; justify-self: start; }
+  .h-row { grid-template-columns: 54px minmax(0,1fr); } .h-row .btn { grid-column: 2; justify-self: start; }
+  .bubble { font-size: 16px; }
+}
+@media (max-width: 480px) { .tabs:not(.small) .tab { padding-inline: 12px; gap: 0; font-size: 14px; } .tabs:not(.small) .tab svg { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
+  .stamp { opacity: .95; } .mini-stamp { opacity: .95; transform: rotate(-5deg); }
+  .hl { background-size: 100% 88%; } .hl-tag { opacity: 1; transform: none; }
+}
+@media print {
+  body { background: #fff; }
+  .topbar, .hero, .sources, .trace, .cases, .how, .scoring, .history, .foot, .actions, .filters, .toast, .skip { display: none !important; }
+  .report { padding: 0; width: 100%; } .sheet { border: 0; } .row-body { display: block !important; }
+  .chev { display: none; } .stamp { opacity: 1; animation: none; } .marker { transition: none; } .wf-bar { transition: none; }
+}
+
+</style>
+</head>
+<body>
+  <a class="skip" href="#checker">Skip to the checker</a>
+
+  <header class="topbar">
+    <div class="wrap topbar-in">
+      <a class="brand" href="#top" aria-label="TrustLens home">
+        <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="14" cy="14" r="10" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9.5 14.5l3 3 5.5-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 22l6 6" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg>
+        <span>TrustLens</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#checker">Check</a>
+        <a href="#cases">Recorded cases</a>
+        <a href="#how">How it works</a>
+        <a href="#scoring">Scoring</a>
+        <a href="#history">History</a>
+      </nav>
+      <div id="modePill" class="mode-pill" role="status" aria-live="polite">
+        <span class="dot"></span><span class="txt">Connecting</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap">
+      <div class="hero-main">
+        <h1>Check before you trust.</h1>
+        <p class="lede">Got a job offer on WhatsApp, a shop link from an ad, or a coaching centre asking for the full fee? Paste it here. TrustLens searches live Google data and shows the evidence behind every verdict.</p>
+
+        <form id="checker" class="form-sheet" autocomplete="off" novalidate>
+          <div class="tabs" role="tablist" aria-label="What do you want to check?" id="modeTabs"></div>
+          <div id="modeIntro" class="mode-intro"></div>
+          <div id="fields" class="fields"></div>
+          <div class="sample-row" id="quickSamples"></div>
+          <div id="formError" class="form-error" role="alert" hidden></div>
+          <div class="submit-row">
+            <button type="submit" class="btn primary" id="runBtn"><span class="btn-label">Run the check</span></button>
+            <label class="switch" id="demoSwitchWrap" hidden>
+              <input type="checkbox" id="demoSwitch"><span class="track"></span><span class="switch-text">Use recorded demo data</span>
+            </label>
+            <span class="cost" id="costNote">Uses about 4 to 6 searches</span>
+          </div>
+        </form>
+      </div>
+
+      <aside class="specimen-wrap" aria-label="Example of a message scan">
+        <figure class="specimen" id="specimen">
+          <figcaption>A forwarded message, scanned</figcaption>
+          <p class="bubble" id="specimenText"></p>
+          <div class="specimen-foot">
+            <div class="mini-read"><span class="mini-num">3</span><span class="mini-of">out of 100</span></div>
+            <div class="mini-stamp">High risk</div>
+          </div>
+        </figure>
+        <p class="specimen-note">Yellow marks are phrases TrustLens recognises from real job scams. Every mark comes with a plain-English reason.</p>
+      </aside>
+    </section>
+
+    <section class="sources" aria-labelledby="sourcesH">
+      <div class="wrap">
+        <h2 id="sourcesH">Where the evidence comes from</h2>
+        <p class="section-lede">Six SerpApi engines, each answering one plain question about whoever is asking for your trust.</p>
+        <ul class="source-list" id="sourceList"></ul>
+      </div>
+    </section>
+
+    <section id="report" class="report wrap" hidden aria-live="polite">
+      <div id="traceMount"></div>
+      <div id="sheetMount"></div>
+    </section>
+
+    <section id="cases" class="cases wrap">
+      <h2>Simulate it without an API key</h2>
+      <p class="section-lede">Eight recorded cases run through the same engine as a live check. All names are fictional. Pick one to watch TrustLens work.</p>
+      <div id="caseList" class="case-list"></div>
+    </section>
+
+    <section id="how" class="how wrap">
+      <h2>How a check works</h2>
+      <ol class="steps" id="howSteps"></ol>
+    </section>
+
+    <section id="scoring" class="scoring wrap">
+      <h2>How the score is built</h2>
+      <p class="section-lede">No black box. Every check starts at 50, each finding moves the score by a fixed amount, and you can see every move in the report.</p>
+      <div class="tabs small" role="tablist" aria-label="Scoring by check type" id="scoreTabs"></div>
+      <div class="table-scroll"><table class="score-table" id="scoreTable"></table></div>
+      <div class="rules" id="scoreRules"></div>
+    </section>
+
+    <section id="history" class="history wrap">
+      <div class="history-head"><h2>Your recent checks</h2><button class="btn quiet" id="clearHistory" hidden>Clear history</button></div>
+      <p class="section-lede">Saved only in this browser. Nothing is uploaded.</p>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-in">
+      <p><strong>TrustLens</strong> was built for the SerpApi India Hackathon 2026. Verdicts are advisory: they summarise public search evidence and are not a legal finding about any business.</p>
+      <p>If you have already paid a scammer in India, call <strong>1930</strong> or report at cybercrime.gov.in. For consumer complaints, call the National Consumer Helpline on <strong>1915</strong>.</p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">TrustLens needs JavaScript to run checks.</p></noscript>
+
+  <script>
+/* generated by scripts/build_static_demo.py, do not edit */
+window.TRUSTLENS_DEMO = {"samples": [{"id": "job-fake-wfh", "mode": "job", "expected": "high_risk", "title": "The work-from-home offer that asks for a fee", "blurb": "A WhatsApp message promises ₹4,000 a day for typing. There is a catch.", "inputs": {"name": "SwiftHire Global Services", "role": "Data Entry Executive (Work From Home)", "location": "Hyderabad", "email": "hr.swifthire.global@gmail.com", "message": "Congratulations! You are selected for Data Entry Executive (Work From Home) at SwiftHire Global Services. No interview required, direct joining. Earn ₹4,000 daily by simple typing tasks. To confirm your seat, pay a refundable registration fee of ₹2,499 and send your Aadhaar and bank details on WhatsApp only. Only 5 vacancies left, hurry!"}}, {"id": "job-legit-analyst", "mode": "job", "expected": "trustworthy", "title": "An interview invite from a real analytics company", "blurb": "A final-round invite that checks out on every count.", "inputs": {"name": "Kestrel Analytics Pvt Ltd", "role": "Junior Data Analyst", "location": "Hyderabad", "email": "careers@kestrelanalytics.in", "message": "Hi Priya, thank you for interviewing for the Junior Data Analyst role. We would like to schedule the final round on Friday at our Madhapur office. Please bring your original ID for verification on the day. No fee is charged at any stage of hiring."}}, {"id": "job-bpo-mixed", "mode": "job", "expected": "caution", "title": "A real company, but the details are shaky", "blurb": "A call-centre role with staffing-agency postings and salary complaints.", "inputs": {"name": "Bluepeak Outsourcing", "role": "Customer Support Associate", "location": "Hyderabad", "email": "recruitment@bluepeakoutsourcing.in", "message": "Salary ₹22,000 per month plus incentives. 2 weeks paid training. Joining in 3 days, please confirm on WhatsApp."}}, {"id": "job-unknown", "mode": "job", "expected": "insufficient", "title": "A tiny firm with almost no online trace", "blurb": "No red flags, but not much evidence either. TrustLens says so instead of guessing.", "inputs": {"name": "Nimbus Ventures LLP", "role": "Office Assistant", "location": "Warangal", "email": "hr@nimbusventures.in", "message": ""}}, {"id": "shop-fake-headphones", "mode": "shop", "expected": "high_risk", "title": "Premium headphones at 80% off", "blurb": "An Instagram ad, a brand-new .top website and a price nobody else can match.", "inputs": {"name": "MegaDealz Outlet", "url": "https://megadealz-official-outlet.top/product/sony-wh-1000xm5", "product": "Sony WH-1000XM5 wireless headphones", "price": "4999", "message": "FLASH SALE TODAY ONLY! 85% OFF. Only 3 pieces left. No COD, pay 100% advance to our personal UPI number and send screenshot on WhatsApp. No returns."}}, {"id": "shop-legit-headphones", "mode": "shop", "expected": "trustworthy", "title": "The same headphones from an established store", "blurb": "A fair price, a known seller and a clean website.", "inputs": {"name": "UrbanCart India", "url": "https://www.urbancart.in/p/sony-wh-1000xm5", "product": "Sony WH-1000XM5 wireless headphones", "price": "24990", "message": ""}}, {"id": "local-coaching-advance", "mode": "local", "expected": "high_risk", "title": "A coaching institute wants the full fee upfront", "blurb": "Guaranteed selection, 100% advance, no refund. Reviews tell the rest.", "inputs": {"name": "BrightPath IAS Academy", "location": "New Delhi", "message": "They want 100% advance payment of ₹85,000, promise guaranteed selection, and say no refund under any condition."}}, {"id": "local-dental-clinic", "mode": "local", "expected": "trustworthy", "title": "A neighbourhood dental clinic", "blurb": "Hundreds of reviews, full contact details and only ordinary complaints.", "inputs": {"name": "Green Leaf Dental Clinic", "location": "Bengaluru", "message": ""}}], "reports": {"job-fake-wfh": {"id": "TL-3AFC831F", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "job", "mode_label": "Job offer", "source": "demo", "sample_id": "job-fake-wfh", "inputs": {"name": "SwiftHire Global Services", "role": "Data Entry Executive (Work From Home)", "location": "Hyderabad", "email": "hr.swifthire.global@gmail.com", "url": "", "product": "", "price": "", "message": "Congratulations! You are selected for Data Entry Executive (Work From Home) at SwiftHire Global Services. No interview required, direct joining. Earn ₹4,000 daily by simple typing tasks. To confirm your seat, pay a refundable registration fee of ₹2,499 and send your Aadhaar and bank details on WhatsApp only. Only 5 vacancies left, hurry!"}, "entity": "SwiftHire Global Services", "score": 3, "verdict": {"level": "high_risk", "label": "High risk", "headline": "Do not pay any fee or share documents."}, "confidence": {"pct": 100, "level": "high"}, "summary": "TrustLens ran 5 searchs and found 4 red flags, 2 cautions and 0 reassuring signals. The biggest factor: 6 scam patterns found in the message.", "summary_source": "rules", "reasons": [{"signal_id": "message", "title": "What they asked of you", "text": "6 scam patterns found in the message", "points": -35}, {"signal_id": "web", "title": "Scam and complaint reports", "text": "4 pages link “SwiftHire Global Services” to scam or fraud reports", "points": -24}, {"signal_id": "maps_presence", "title": "Business footprint", "text": "This company has no matching Google Maps listing", "points": -10}], "counts": {"fail": 4, "warn": 2, "pass": 0, "unknown": 0}, "signals": [{"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "fail", "points": -10, "finding": "This company has no matching Google Maps listing", "detail": "Real employers usually have an office or business profile. New start-ups can be an exception, so verify through other channels.", "evidence": [{"label": "Closest listing", "value": "Swift Print Solutions (match 63%)"}], "weight": 12, "engines": ["google_maps"], "optional": false, "critical": false, "absence": true}, {"id": "job_posting", "category": "market", "title": "Listed on Google Jobs", "status": "warn", "points": -4, "finding": "Similar roles exist, but none are posted by this company", "detail": "Google Jobs shows the role under other names (Meridian BPO Services, Orbit Staffing). It could be a staffing agency or a different company using the same title. Ask who the actual employer is.", "evidence": [{"label": "Meridian BPO Services via via LinkedIn", "value": "Data Entry Operator", "url": "https://jobs.example/meridian-1"}, {"label": "Orbit Staffing via via Naukri", "value": "Data Entry Executive", "url": "https://jobs.example/orbit-2"}], "weight": 16, "engines": ["google_jobs"], "optional": false, "critical": false, "absence": true}, {"id": "recruiter", "category": "behaviour", "title": "Recruiter e-mail", "status": "fail", "points": -10, "finding": "Recruiter uses a free e-mail (gmail.com)", "detail": "Established companies hire from their own domain. Free mail accounts cost nothing to create.", "evidence": [{"label": "Sender domain", "value": "gmail.com"}], "weight": 16, "engines": [], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "fail", "points": -35, "finding": "6 scam patterns found in the message", "detail": "Real employers never charge candidates for registration, training, kits or 'security'. This is the most common job-scam pattern in India. Identity and bank details should only be shared after a verified offer letter, never over chat.", "evidence": [{"label": "Asks you to pay money", "value": "“pay a refundable registration fee of ₹2,499”"}, {"label": "Wants Aadhaar / bank details early", "value": "“send your Aadhaar and bank details”"}, {"label": "Unrealistic daily earnings", "value": "“Earn ₹4,000 daily”"}, {"label": "'No interview' or instant selection", "value": "“No interview”"}, {"label": "Moves you to WhatsApp / Telegram only", "value": "“WhatsApp only”"}], "weight": 35, "engines": [], "optional": false, "critical": true, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "fail", "points": -24, "finding": "4 pages link “SwiftHire Global Services” to scam or fraud reports", "detail": "Independent pages describe the same pattern. Multiple unrelated reports are a strong warning. A follow-up search on forums and consumer-complaint pages confirmed it.", "evidence": [{"label": "Complaint site: consumer-complaints-board.in", "value": "SwiftHire Global Services: scam or genuine?", "url": "https://www.consumer-complaints-board.in/swifthire-global-services"}, {"label": "Forum: forum.jobseekers-india.in", "value": "Beware: SwiftHire Global Services work-from-home offer is a fraud", "url": "https://forum.jobseekers-india.in/t/swifthire-wfh"}, {"label": "Website: cybersafe-india.in", "value": "How to spot fake work-from-home jobs", "url": "https://www.cybersafe-india.in/fake-wfh-jobs"}], "weight": 24, "engines": ["google"], "optional": false, "critical": true, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "warn", "points": -10, "finding": "1 negative news story", "detail": "Read the story to see whether it applies to what you are being offered.", "evidence": [{"label": "City Herald, 2 weeks ago", "value": "Cyber police warn of fake work-from-home jobs asking for registration fees", "url": "https://cityherald.example/cyber-wfh-warning"}], "weight": 16, "engines": ["google_news"], "optional": false, "critical": false, "absence": false}], "waterfall": [{"id": "message", "title": "What they asked of you", "points": -35}, {"id": "web", "title": "Scam and complaint reports", "points": -24}, {"id": "maps_presence", "title": "Business footprint", "points": -10}, {"id": "recruiter", "title": "Recruiter e-mail", "points": -10}, {"id": "news", "title": "News coverage", "points": -10}, {"id": "job_posting", "title": "Listed on Google Jobs", "points": -4}], "panels": {"place": null, "near": [{"title": "Swift Print Solutions", "rating": 4.1, "reviews": 38, "address": "Shop 12, Abids Road, Hyderabad, Telangana 500001", "phone": "+91 40 5550 1234", "website": null, "type": "Printing service", "data_id": "0x3bcbb7c6023e:0xde00d9cfb2", "lat": null, "lng": null, "open_state": null, "match": 0.63, "link": "https://www.google.com/maps/search/?api=1&query=Swift%20Print%20Solutions%20Shop%2012%2C%20Abids%20Road%2C%20Hyderabad%2C%20Telangana%20500001"}], "jobs": [{"title": "Data Entry Operator", "company": "Meridian BPO Services", "location": "Hyderabad, Telangana", "via": "via LinkedIn", "posted": "3 days ago", "link": "https://jobs.example/meridian-1", "from_company": false}, {"title": "Data Entry Executive", "company": "Orbit Staffing", "location": "Hyderabad, Telangana", "via": "via Naukri", "posted": "1 week ago", "link": "https://jobs.example/orbit-2", "from_company": false}], "message": {"flags": [{"id": "fee_request", "label": "Asks you to pay money", "severity": "high", "why": "Real employers never charge candidates for registration, training, kits or 'security'. This is the most common job-scam pattern in India.", "points": 25, "critical": true, "matches": ["pay a refundable registration fee of ₹2,499"]}, {"id": "sensitive_docs", "label": "Wants Aadhaar / bank details early", "severity": "medium", "why": "Identity and bank details should only be shared after a verified offer letter, never over chat.", "points": 10, "critical": false, "matches": ["send your Aadhaar and bank details"]}, {"id": "earnings_claim", "label": "Unrealistic daily earnings", "severity": "medium", "why": "Promises of thousands per day for simple work are not how genuine payroll works.", "points": 6, "critical": false, "matches": ["Earn ₹4,000 daily"]}, {"id": "no_interview", "label": "'No interview' or instant selection", "severity": "medium", "why": "Legitimate hiring involves at least one interview or assessment.", "points": 6, "critical": false, "matches": ["No interview", "direct joining"]}, {"id": "chat_only", "label": "Moves you to WhatsApp / Telegram only", "severity": "medium", "why": "Scammers avoid official channels. A real recruiter can email from a company domain and share a careers link.", "points": 6, "critical": false, "matches": ["WhatsApp only"]}, {"id": "urgency", "label": "Pressure to act quickly", "severity": "low", "why": "Urgency stops you from checking. Genuine offers can wait a day.", "points": 2, "critical": false, "matches": ["Only 5 vacancies", "hurry"]}], "highlights": [{"start": 106, "end": 118, "text": "No interview", "rule": "no_interview", "label": "'No interview' or instant selection", "severity": "medium"}, {"start": 129, "end": 143, "text": "direct joining", "rule": "no_interview", "label": "'No interview' or instant selection", "severity": "medium"}, {"start": 145, "end": 162, "text": "Earn ₹4,000 daily", "rule": "earnings_claim", "label": "Unrealistic daily earnings", "severity": "medium"}, {"start": 209, "end": 252, "text": "pay a refundable registration fee of ₹2,499", "rule": "fee_request", "label": "Asks you to pay money", "severity": "high"}, {"start": 257, "end": 291, "text": "send your Aadhaar and bank details", "rule": "sensitive_docs", "label": "Wants Aadhaar / bank details early", "severity": "medium"}, {"start": 295, "end": 308, "text": "WhatsApp only", "rule": "chat_only", "label": "Moves you to WhatsApp / Telegram only", "severity": "medium"}, {"start": 310, "end": 326, "text": "Only 5 vacancies", "rule": "urgency", "label": "Pressure to act quickly", "severity": "low"}, {"start": 333, "end": 338, "text": "hurry", "rule": "urgency", "label": "Pressure to act quickly", "severity": "low"}], "penalty": 35, "critical": true, "text": "Congratulations! You are selected for Data Entry Executive (Work From Home) at SwiftHire Global Services. No interview required, direct joining. Earn ₹4,000 daily by simple typing tasks. To confirm your seat, pay a refundable registration fee of ₹2,499 and send your Aadhaar and bank details on WhatsApp only. Only 5 vacancies left, hurry!"}, "web": [{"title": "SwiftHire Global Services: scam or genuine?", "link": "https://www.consumer-complaints-board.in/swifthire-global-services", "host": "consumer-complaints-board.in", "snippet": "Several candidates report paying a registration fee for a data entry job at SwiftHire Global Services. Beware of this fake offer.", "kind": "Complaint site", "relevant": true, "official": false, "flag": "strong", "terms": ["scam", "fake", "beware"], "date": null}, {"title": "Beware: SwiftHire Global Services work-from-home offer is a fraud", "link": "https://forum.jobseekers-india.in/t/swifthire-wfh", "host": "forum.jobseekers-india.in", "snippet": "Got a WhatsApp message from SwiftHire Global Services promising ₹4,000 per day. Classic fraud, do not pay.", "kind": "Forum", "relevant": true, "official": false, "flag": "strong", "terms": ["fraud", "beware"], "date": null}, {"title": "How to spot fake work-from-home jobs", "link": "https://www.cybersafe-india.in/fake-wfh-jobs", "host": "cybersafe-india.in", "snippet": "Job scammers use names such as SwiftHire Global Services and ask for refundable deposits.", "kind": "Website", "relevant": true, "official": false, "flag": "strong", "terms": ["scammer", "fake"], "date": null}, {"title": "r/jobscams: SwiftHire Global Services registration fee experience", "link": "https://www.reddit.com/r/jobscams/comments/swifthire", "host": "reddit.com", "snippet": "Paid ₹2,499 to SwiftHire Global Services and the number is now switched off. Fraud.", "kind": "Forum", "relevant": true, "official": false, "flag": "strong", "terms": ["fraud"], "date": null}, {"title": "Consumer complaint: SwiftHire Global Services refund not received", "link": "https://www.complaints-forum.in/swifthire", "host": "complaints-forum.in", "snippet": "Candidate paid the registration fee to SwiftHire Global Services on request. Refund not received after 30 days.", "kind": "Complaint site", "relevant": true, "official": false, "flag": "weak", "terms": ["complaint", "refund", "not received"], "date": null}, {"title": "Data Entry Jobs in Hyderabad", "link": "https://www.freshjobs-hyd.in/data-entry", "host": "freshjobs-hyd.in", "snippet": "Swift Hire Global Services hiring 50 candidates, work from home, no experience needed.", "kind": "Website", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}, {"title": "Work from home typing jobs: can you really earn ₹4000 daily?", "link": "https://www.wfhtips.in/typing-jobs", "host": "wfhtips.in", "snippet": "Read the fine print before paying any fee for online work.", "kind": "Website", "relevant": false, "official": false, "flag": "none", "terms": [], "date": null}], "news": [{"title": "Cyber police warn of fake work-from-home jobs asking for registration fees", "link": "https://cityherald.example/cyber-wfh-warning", "source": "City Herald", "date": "2 weeks ago", "snippet": "Police say fraudsters are using names like SwiftHire Global Services.", "tone": "negative", "terms": ["fraud"]}]}, "next_steps": [{"title": "Do not pay anything", "body": "Genuine employers never charge registration, training or 'security' fees. If money has already left your account, call 1930 or report at cybercrime.gov.in as soon as possible."}, {"title": "Do not share Aadhaar, PAN or bank details", "body": "Keep identity documents until you hold a verified offer letter from a company you have confirmed independently."}, {"title": "Report and warn others", "body": "Report to the National Consumer Helpline (1915) or cybercrime.gov.in, and warn the group that forwarded this to you."}, {"title": "Ask for an official e-mail", "body": "Request that the recruiter writes from an address on the company's own domain."}], "trace": [{"step": 1, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "SwiftHire Global Services Hyderabad", "status": "ok", "ms": 636, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 2, "engine": "google_jobs", "engine_label": "Google Jobs", "purpose": "jobs", "query": "Data Entry Executive (Work From Home) SwiftHire Global Services Hyderabad", "status": "ok", "ms": 1237, "cached": false, "results": 2, "followup": false, "note": ""}, {"step": 3, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"SwiftHire Global Services\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 705, "cached": false, "results": 5, "followup": false, "note": ""}, {"step": 4, "engine": "google", "engine_label": "Google Search", "purpose": "followup", "query": "SwiftHire Global Services reddit OR quora OR \"consumer complaint\" experience", "status": "ok", "ms": 1063, "cached": false, "results": 2, "followup": true, "note": ""}, {"step": 5, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"SwiftHire Global Services\"", "status": "ok", "ms": 899, "cached": false, "results": 1, "followup": false, "note": ""}], "usage": {"searches": 5, "cache_hits": 0, "engines": ["google", "google_jobs", "google_maps", "google_news"]}, "notes": []}, "job-legit-analyst": {"id": "TL-9A4F6028", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "job", "mode_label": "Job offer", "source": "demo", "sample_id": "job-legit-analyst", "inputs": {"name": "Kestrel Analytics Pvt Ltd", "role": "Junior Data Analyst", "location": "Hyderabad", "email": "careers@kestrelanalytics.in", "url": "", "product": "", "price": "", "message": "Hi Priya, thank you for interviewing for the Junior Data Analyst role. We would like to schedule the final round on Friday at our Madhapur office. Please bring your original ID for verification on the day. No fee is charged at any stage of hiring."}, "entity": "Kestrel Analytics Pvt Ltd", "score": 97, "verdict": {"level": "trustworthy", "label": "Looks legitimate", "headline": "No serious warning signs found for this offer."}, "confidence": {"pct": 100, "level": "high"}, "summary": "TrustLens ran 4 searchs and found 0 red flags, 0 cautions and 7 reassuring signals. The biggest factor: 2 live postings from this company on Google Jobs.", "summary_source": "rules", "reasons": [{"signal_id": "job_posting", "title": "Listed on Google Jobs", "text": "2 live postings from this company on Google Jobs", "points": 16}, {"signal_id": "maps_presence", "title": "Business footprint", "text": "Found “Kestrel Analytics Pvt Ltd” on Google Maps", "points": 12}, {"signal_id": "recruiter", "title": "Recruiter e-mail", "text": "Sender domain matches the company's official website", "points": 10}], "counts": {"fail": 0, "warn": 0, "pass": 7, "unknown": 0}, "signals": [{"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "pass", "points": 12, "finding": "Found “Kestrel Analytics Pvt Ltd” on Google Maps", "detail": "A real, findable location or business profile is hard to fake at scale. It is one of the strongest identity signals available in public search.", "evidence": [{"label": "Listed as", "value": "Kestrel Analytics Pvt Ltd"}, {"label": "Address", "value": "Plot 41, HITEC City Road, Madhapur, Hyderabad, Telangana 500081"}, {"label": "Category", "value": "Software company"}, {"label": "Open on Google Maps", "value": "view listing", "url": "https://www.google.com/maps/search/?api=1&query=Kestrel%20Analytics%20Pvt%20Ltd%20Plot%2041%2C%20HITEC%20City%20Road%2C%20Madhapur%2C%20Hyderabad%2C%20Telangana%20500081"}], "weight": 12, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "maps_reputation", "category": "reputation", "title": "Public reviews", "status": "pass", "points": 8, "finding": "4.4★ from 312 reviews", "detail": "A high rating backed by many independent reviews is expensive for fraudsters to imitate.", "evidence": [{"label": "Rating", "value": "4.4 out of 5"}, {"label": "Number of reviews", "value": "312"}], "weight": 10, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "job_posting", "category": "market", "title": "Listed on Google Jobs", "status": "pass", "points": 16, "finding": "2 live postings from this company on Google Jobs", "detail": "Genuine employers post openings on public job boards. Fake offers usually only exist in a chat message.", "evidence": [{"label": "Kestrel Analytics via via LinkedIn", "value": "Junior Data Analyst", "url": "https://jobs.example/kestrel-1"}, {"label": "Kestrel Analytics Pvt Ltd via via Kestrel Careers", "value": "Junior Data Analyst", "url": "https://kestrelanalytics.example/careers/jda"}], "weight": 16, "engines": ["google_jobs"], "optional": false, "critical": false, "absence": false}, {"id": "recruiter", "category": "behaviour", "title": "Recruiter e-mail", "status": "pass", "points": 10, "finding": "Sender domain matches the company's official website", "detail": "The e-mail comes from the same domain as the business listed on Google Maps.", "evidence": [{"label": "Sender domain", "value": "kestrelanalytics.in"}, {"label": "Company website on Google Maps", "value": "kestrelanalytics.in"}], "weight": 16, "engines": [], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "pass", "points": 4, "finding": "No known scam phrases in the message", "detail": "The text does not ask for money, personal documents or urgency. That is a small positive.", "evidence": [], "weight": 35, "engines": [], "optional": true, "critical": false, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "pass", "points": 10, "finding": "5 relevant pages found, none report scams", "detail": "The name shows up across the web with no scam or fraud warnings attached.", "evidence": [{"label": "Website: kestrelanalytics.in", "value": "Careers at Kestrel Analytics | Join our Hyderabad team", "url": "https://www.kestrelanalytics.in/careers"}, {"label": "Review site: workplace-reviews.in", "value": "Kestrel Analytics reviews: work culture, salaries and interview questions", "url": "https://www.workplace-reviews.in/kestrel-analytics"}, {"label": "Website: companycheck.in", "value": "Is Kestrel Analytics legit? Company profile", "url": "https://www.companycheck.in/kestrel-analytics-pvt-ltd"}], "weight": 24, "engines": ["google"], "optional": false, "critical": false, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "pass", "points": 6, "finding": "2 positive business stories", "detail": "Funding, expansion or hiring news from reputable outlets suggests a real, operating organisation.", "evidence": [{"label": "Deccan Business Daily, 1 month ago", "value": "Kestrel Analytics opens second Hyderabad centre, plans to hire 300", "url": "https://deccanbusinessdaily.example/kestrel-centre"}, {"label": "StartupBrief India, 3 months ago", "value": "Kestrel Analytics raises Series B funding to expand its analytics platform", "url": "https://startupbrief.example/kestrel-series-b"}], "weight": 16, "engines": ["google_news"], "optional": true, "critical": false, "absence": false}], "waterfall": [{"id": "job_posting", "title": "Listed on Google Jobs", "points": 16}, {"id": "maps_presence", "title": "Business footprint", "points": 12}, {"id": "recruiter", "title": "Recruiter e-mail", "points": 10}, {"id": "web", "title": "Scam and complaint reports", "points": 10}, {"id": "maps_reputation", "title": "Public reviews", "points": 8}, {"id": "news", "title": "News coverage", "points": 6}, {"id": "message", "title": "What they asked of you", "points": 4}], "panels": {"place": {"title": "Kestrel Analytics Pvt Ltd", "rating": 4.4, "reviews": 312, "address": "Plot 41, HITEC City Road, Madhapur, Hyderabad, Telangana 500081", "phone": "+91 40 5550 0123", "website": "https://www.kestrelanalytics.in/", "type": "Software company", "data_id": "0x3bcbc4243e62:0xc03ef79720", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=Kestrel%20Analytics%20Pvt%20Ltd%20Plot%2041%2C%20HITEC%20City%20Road%2C%20Madhapur%2C%20Hyderabad%2C%20Telangana%20500081"}, "near": [{"title": "Kestrel Analytics Pvt Ltd", "rating": 4.4, "reviews": 312, "address": "Plot 41, HITEC City Road, Madhapur, Hyderabad, Telangana 500081", "phone": "+91 40 5550 0123", "website": "https://www.kestrelanalytics.in/", "type": "Software company", "data_id": "0x3bcbc4243e62:0xc03ef79720", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=Kestrel%20Analytics%20Pvt%20Ltd%20Plot%2041%2C%20HITEC%20City%20Road%2C%20Madhapur%2C%20Hyderabad%2C%20Telangana%20500081"}], "jobs": [{"title": "Junior Data Analyst", "company": "Kestrel Analytics", "location": "Hyderabad, Telangana", "via": "via LinkedIn", "posted": "5 days ago", "link": "https://jobs.example/kestrel-1", "from_company": true}, {"title": "Junior Data Analyst", "company": "Kestrel Analytics Pvt Ltd", "location": "Hyderabad, Telangana", "via": "via Kestrel Careers", "posted": "2 days ago", "link": "https://kestrelanalytics.example/careers/jda", "from_company": true}, {"title": "Data Analyst (Fresher)", "company": "Meridian Insights", "location": "Hyderabad, Telangana", "via": "via Naukri", "posted": "1 week ago", "link": "https://jobs.example/meridian-3", "from_company": false}], "message": {"flags": [], "highlights": [], "penalty": 0, "critical": false, "text": "Hi Priya, thank you for interviewing for the Junior Data Analyst role. We would like to schedule the final round on Friday at our Madhapur office. Please bring your original ID for verification on the day. No fee is charged at any stage of hiring."}, "web": [{"title": "Careers at Kestrel Analytics | Join our Hyderabad team", "link": "https://www.kestrelanalytics.in/careers", "host": "kestrelanalytics.in", "snippet": "Kestrel Analytics is hiring analysts, engineers and designers. Applications are free at every stage of hiring.", "kind": "Website", "relevant": true, "official": true, "flag": "none", "terms": [], "date": null}, {"title": "Kestrel Analytics reviews: work culture, salaries and interview questions", "link": "https://www.workplace-reviews.in/kestrel-analytics", "host": "workplace-reviews.in", "snippet": "Employees rate Kestrel Analytics 4.2 for work-life balance. Interview process: two technical rounds and one HR round.", "kind": "Review site", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}, {"title": "Is Kestrel Analytics legit? Company profile", "link": "https://www.companycheck.in/kestrel-analytics-pvt-ltd", "host": "companycheck.in", "snippet": "Kestrel Analytics Pvt Ltd is a registered private limited company in Telangana. No scam reports found.", "kind": "Website", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}, {"title": "Kestrel Analytics | LinkedIn", "link": "https://www.linkedin.com/company/kestrel-analytics", "host": "linkedin.com", "snippet": "Kestrel Analytics, analytics and data engineering company headquartered in Hyderabad.", "kind": "Professional network", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}, {"title": "Kestrel Analytics opens second delivery centre", "link": "https://www.deccanbusinessdaily.example/kestrel-centre", "host": "deccanbusinessdaily.example", "snippet": "The company plans to add 300 roles across analytics and engineering.", "kind": "Website", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}], "news": [{"title": "Kestrel Analytics opens second Hyderabad centre, plans to hire 300", "link": "https://deccanbusinessdaily.example/kestrel-centre", "source": "Deccan Business Daily", "date": "1 month ago", "snippet": "Kestrel Analytics expanded its Madhapur presence.", "tone": "positive", "terms": ["opens"]}, {"title": "Kestrel Analytics raises Series B funding to expand its analytics platform", "link": "https://startupbrief.example/kestrel-series-b", "source": "StartupBrief India", "date": "3 months ago", "snippet": "The funding will support product and hiring.", "tone": "positive", "terms": ["raises", "funding", "series ", "hiring"]}]}, "next_steps": [{"title": "Still confirm the basics", "body": "Check that the phone number and e-mail you were given match the ones on the official listing."}, {"title": "Keep records", "body": "Save the offer letter, invoice or receipt in case anything changes later."}], "trace": [{"step": 1, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "Kestrel Analytics Pvt Ltd Hyderabad", "status": "ok", "ms": 1136, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 2, "engine": "google_jobs", "engine_label": "Google Jobs", "purpose": "jobs", "query": "Junior Data Analyst Kestrel Analytics Pvt Ltd Hyderabad", "status": "ok", "ms": 812, "cached": false, "results": 3, "followup": false, "note": ""}, {"step": 3, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"Kestrel Analytics Pvt Ltd\" OR \"kestrelanalytics.in\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 673, "cached": false, "results": 5, "followup": false, "note": ""}, {"step": 4, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"Kestrel Analytics Pvt Ltd\"", "status": "ok", "ms": 792, "cached": false, "results": 2, "followup": false, "note": ""}], "usage": {"searches": 4, "cache_hits": 0, "engines": ["google", "google_jobs", "google_maps", "google_news"]}, "notes": []}, "job-bpo-mixed": {"id": "TL-E969FD30", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "job", "mode_label": "Job offer", "source": "demo", "sample_id": "job-bpo-mixed", "inputs": {"name": "Bluepeak Outsourcing", "role": "Customer Support Associate", "location": "Hyderabad", "email": "recruitment@bluepeakoutsourcing.in", "url": "", "product": "", "price": "", "message": "Salary ₹22,000 per month plus incentives. 2 weeks paid training. Joining in 3 days, please confirm on WhatsApp."}, "entity": "Bluepeak Outsourcing", "score": 53, "verdict": {"level": "caution", "label": "Proceed with caution", "headline": "Verify the employer before you go further."}, "confidence": {"pct": 100, "level": "high"}, "summary": "TrustLens ran 5 searchs and found 0 red flags, 4 cautions and 2 reassuring signals. The biggest factor: 1 low-rated review mentions a serious complaint.", "summary_source": "rules", "reasons": [{"signal_id": "reviews", "title": "What unhappy customers say", "text": "1 low-rated review mentions a serious complaint", "points": -6}, {"signal_id": "message", "title": "What they asked of you", "text": "1 scam pattern found in the message", "points": -6}, {"signal_id": "web", "title": "Scam and complaint reports", "text": "2 pages mention complaints or refund problems", "points": -5}], "counts": {"fail": 0, "warn": 4, "pass": 2, "unknown": 1}, "signals": [{"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "pass", "points": 12, "finding": "Found “Bluepeak Outsourcing” on Google Maps", "detail": "A real, findable location or business profile is hard to fake at scale. It is one of the strongest identity signals available in public search.", "evidence": [{"label": "Listed as", "value": "Bluepeak Outsourcing"}, {"label": "Address", "value": "2nd Floor, Kavuri Hills, Madhapur, Hyderabad, Telangana 500033"}, {"label": "Category", "value": "Call centre"}, {"label": "Open on Google Maps", "value": "view listing", "url": "https://www.google.com/maps/search/?api=1&query=Bluepeak%20Outsourcing%202nd%20Floor%2C%20Kavuri%20Hills%2C%20Madhapur%2C%20Hyderabad%2C%20Telangana%20500033"}], "weight": 12, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "maps_reputation", "category": "reputation", "title": "Public reviews", "status": "info", "points": 2, "finding": "Mixed reputation: 3.5★ from 27 reviews", "detail": "Not alarming, but not strongly reassuring either. Read the recent reviews before deciding.", "evidence": [{"label": "Rating", "value": "3.5 out of 5"}, {"label": "Number of reviews", "value": "27"}], "weight": 10, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "job_posting", "category": "market", "title": "Listed on Google Jobs", "status": "warn", "points": -4, "finding": "Similar roles exist, but none are posted by this company", "detail": "Google Jobs shows the role under other names (TalentBridge Staffing). It could be a staffing agency or a different company using the same title. Ask who the actual employer is.", "evidence": [{"label": "TalentBridge Staffing via via LinkedIn", "value": "Customer Support Associate (client: Bluepeak)", "url": "https://jobs.example/talentbridge-9"}], "weight": 16, "engines": ["google_jobs"], "optional": false, "critical": false, "absence": true}, {"id": "reviews", "category": "reputation", "title": "What unhappy customers say", "status": "warn", "points": -6, "finding": "1 low-rated review mentions a serious complaint", "detail": "One or two serious complaints exist. Read them for context.", "evidence": [{"label": "2★ review", "value": "“Salary was delayed twice and HR gave no response when I asked. Team leads are fine though.”"}], "weight": 12, "engines": ["google_maps_reviews"], "optional": false, "critical": false, "absence": false}, {"id": "recruiter", "category": "behaviour", "title": "Recruiter e-mail", "status": "pass", "points": 10, "finding": "Sender domain matches the company's official website", "detail": "The e-mail comes from the same domain as the business listed on Google Maps.", "evidence": [{"label": "Sender domain", "value": "bluepeakoutsourcing.in"}, {"label": "Company website on Google Maps", "value": "bluepeakoutsourcing.in"}], "weight": 16, "engines": [], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "warn", "points": -6, "finding": "1 scam pattern found in the message", "detail": "Scammers avoid official channels. A real recruiter can email from a company domain and share a careers link.", "evidence": [{"label": "Moves you to WhatsApp / Telegram only", "value": "“confirm on WhatsApp”"}], "weight": 35, "engines": [], "optional": false, "critical": false, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "warn", "points": -5, "finding": "2 pages mention complaints or refund problems", "detail": "No outright fraud claims, but a repeated pattern of complaints is worth reading.", "evidence": [{"label": "Review site: workplace-reviews.in", "value": "Bluepeak Outsourcing reviews: salary delay and deduction problems", "url": "https://www.workplace-reviews.in/bluepeak-outsourcing"}, {"label": "Forum: forum.jobseekers-india.in", "value": "Anyone facing delayed salary at Bluepeak Outsourcing?", "url": "https://forum.jobseekers-india.in/t/bluepeak-salary"}], "weight": 24, "engines": ["google"], "optional": false, "critical": false, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "unknown", "points": 0, "finding": "No news coverage found", "detail": "Small businesses often have none, so this neither helps nor hurts.", "evidence": [], "weight": 16, "engines": ["google_news"], "optional": true, "critical": false, "absence": false}], "waterfall": [{"id": "maps_presence", "title": "Business footprint", "points": 12}, {"id": "recruiter", "title": "Recruiter e-mail", "points": 10}, {"id": "reviews", "title": "What unhappy customers say", "points": -6}, {"id": "message", "title": "What they asked of you", "points": -6}, {"id": "web", "title": "Scam and complaint reports", "points": -5}, {"id": "job_posting", "title": "Listed on Google Jobs", "points": -4}, {"id": "maps_reputation", "title": "Public reviews", "points": 2}], "panels": {"place": {"title": "Bluepeak Outsourcing", "rating": 3.5, "reviews": 27, "address": "2nd Floor, Kavuri Hills, Madhapur, Hyderabad, Telangana 500033", "phone": "+91 40 5550 7788", "website": "http://bluepeakoutsourcing.in", "type": "Call centre", "data_id": "0x3bcbefd832b5:0xd426fe1af8", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=Bluepeak%20Outsourcing%202nd%20Floor%2C%20Kavuri%20Hills%2C%20Madhapur%2C%20Hyderabad%2C%20Telangana%20500033"}, "near": [{"title": "Bluepeak Outsourcing", "rating": 3.5, "reviews": 27, "address": "2nd Floor, Kavuri Hills, Madhapur, Hyderabad, Telangana 500033", "phone": "+91 40 5550 7788", "website": "http://bluepeakoutsourcing.in", "type": "Call centre", "data_id": "0x3bcbefd832b5:0xd426fe1af8", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=Bluepeak%20Outsourcing%202nd%20Floor%2C%20Kavuri%20Hills%2C%20Madhapur%2C%20Hyderabad%2C%20Telangana%20500033"}], "jobs": [{"title": "Customer Support Associate (client: Bluepeak)", "company": "TalentBridge Staffing", "location": "Hyderabad, Telangana", "via": "via LinkedIn", "posted": "1 week ago", "link": "https://jobs.example/talentbridge-9", "from_company": false}], "reviews": [{"rating": 2, "text": "Salary was delayed twice and HR gave no response when I asked. Team leads are fine though.", "date": "3 months ago", "user": "Ravi K.", "terms": ["no response"]}, {"rating": 3, "text": "Targets are tough, but the team is friendly and training was okay.", "date": "5 months ago", "user": "Anita S.", "terms": []}, {"rating": 3, "text": "Incentives are paid late. Work timings keep changing.", "date": "7 months ago", "user": "Imran P.", "terms": []}], "message": {"flags": [{"id": "chat_only", "label": "Moves you to WhatsApp / Telegram only", "severity": "medium", "why": "Scammers avoid official channels. A real recruiter can email from a company domain and share a careers link.", "points": 6, "critical": false, "matches": ["confirm on WhatsApp"]}], "highlights": [{"start": 91, "end": 110, "text": "confirm on WhatsApp", "rule": "chat_only", "label": "Moves you to WhatsApp / Telegram only", "severity": "medium"}], "penalty": 6, "critical": false, "text": "Salary ₹22,000 per month plus incentives. 2 weeks paid training. Joining in 3 days, please confirm on WhatsApp."}, "web": [{"title": "Bluepeak Outsourcing reviews: salary delay and deduction problems", "link": "https://www.workplace-reviews.in/bluepeak-outsourcing", "host": "workplace-reviews.in", "snippet": "Some employees mention delayed salary and deducted training charges at Bluepeak Outsourcing, while others praise the support team.", "kind": "Review site", "relevant": true, "official": false, "flag": "weak", "terms": ["delayed salary", "salary delay", "deducted"], "date": null}, {"title": "Anyone facing delayed salary at Bluepeak Outsourcing?", "link": "https://forum.jobseekers-india.in/t/bluepeak-salary", "host": "forum.jobseekers-india.in", "snippet": "Delayed salary for two months and no response from HR. Refund of the deducted training amount is still pending.", "kind": "Forum", "relevant": true, "official": false, "flag": "weak", "terms": ["refund", "delayed salary", "deducted", "no response"], "date": null}, {"title": "Bluepeak Outsourcing: company profile", "link": "https://www.companycheck.in/bluepeak-outsourcing", "host": "companycheck.in", "snippet": "Bluepeak Outsourcing operates customer support and back-office services from Hyderabad.", "kind": "Website", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}, {"title": "Bluepeak Outsourcing careers", "link": "http://bluepeakoutsourcing.in/careers", "host": "bluepeakoutsourcing.in", "snippet": "Join the Bluepeak Outsourcing support team. Openings for customer support associates.", "kind": "Website", "relevant": true, "official": true, "flag": "none", "terms": [], "date": null}], "news": []}, "next_steps": [{"title": "Verify through an independent channel", "body": "Find the official contact details yourself from the company website or Google Maps listing and call to confirm the offer."}, {"title": "Ask for a written offer on company letterhead", "body": "Confirm the recruiter's name on LinkedIn and ask for an e-mail from the company domain."}], "trace": [{"step": 1, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "Bluepeak Outsourcing Hyderabad", "status": "ok", "ms": 453, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 2, "engine": "google_jobs", "engine_label": "Google Jobs", "purpose": "jobs", "query": "Customer Support Associate Bluepeak Outsourcing Hyderabad", "status": "ok", "ms": 536, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 3, "engine": "google_maps_reviews", "engine_label": "Maps reviews", "purpose": "reviews", "query": "lowest-rated reviews of Bluepeak Outsourcing", "status": "ok", "ms": 452, "cached": false, "results": 3, "followup": true, "note": ""}, {"step": 4, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"Bluepeak Outsourcing\" OR \"bluepeakoutsourcing.in\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 1198, "cached": false, "results": 4, "followup": false, "note": ""}, {"step": 5, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"Bluepeak Outsourcing\"", "status": "empty", "ms": 1113, "cached": false, "results": 0, "followup": false, "note": "no recorded data for this query"}], "usage": {"searches": 4, "cache_hits": 0, "engines": ["google", "google_jobs", "google_maps", "google_maps_reviews", "google_news"]}, "notes": []}, "job-unknown": {"id": "TL-57442844", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "job", "mode_label": "Job offer", "source": "demo", "sample_id": "job-unknown", "inputs": {"name": "Nimbus Ventures LLP", "role": "Office Assistant", "location": "Warangal", "email": "hr@nimbusventures.in", "url": "", "product": "", "price": "", "message": ""}, "entity": "Nimbus Ventures LLP", "score": 39, "verdict": {"level": "insufficient", "label": "Not enough evidence", "headline": "Public data is too thin to judge this offer."}, "confidence": {"pct": 65, "level": "medium"}, "summary": "TrustLens ran 4 searchs and found 1 red flag, 1 caution and 1 reassuring signal. The biggest factor: sender domain resembles the company name.", "summary_source": "rules", "reasons": [{"signal_id": "recruiter", "title": "Recruiter e-mail", "text": "Sender domain resembles the company name", "points": 5}], "counts": {"fail": 1, "warn": 1, "pass": 1, "unknown": 3}, "signals": [{"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "fail", "points": -10, "finding": "This company has no matching Google Maps listing", "detail": "Real employers usually have an office or business profile. New start-ups can be an exception, so verify through other channels.", "evidence": [{"label": "Closest listing", "value": "Nimbus Tutorials (match 69%)"}], "weight": 12, "engines": ["google_maps"], "optional": false, "critical": false, "absence": true}, {"id": "job_posting", "category": "market", "title": "Listed on Google Jobs", "status": "warn", "points": -6, "finding": "No public posting for this role was found", "detail": "Not every job is advertised, but an offer that exists only in a private message deserves extra checking.", "evidence": [], "weight": 16, "engines": ["google_jobs"], "optional": false, "critical": false, "absence": true}, {"id": "recruiter", "category": "behaviour", "title": "Recruiter e-mail", "status": "pass", "points": 5, "finding": "Sender domain resembles the company name", "detail": "It looks consistent with the company name, but could not be confirmed against an official website.", "evidence": [{"label": "Sender domain", "value": "nimbusventures.in"}], "weight": 16, "engines": [], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "unknown", "points": 0, "finding": "No message pasted", "detail": "Paste the offer or chat text and TrustLens will highlight known scam phrases.", "evidence": [], "weight": 35, "engines": [], "optional": true, "critical": false, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "unknown", "points": 0, "finding": "Too little web coverage to judge", "detail": "Fewer than three relevant pages mention this name. Absence of complaints is not proof of safety.", "evidence": [], "weight": 24, "engines": ["google"], "optional": false, "critical": false, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "unknown", "points": 0, "finding": "No news coverage found", "detail": "Small businesses often have none, so this neither helps nor hurts.", "evidence": [], "weight": 16, "engines": ["google_news"], "optional": true, "critical": false, "absence": false}], "waterfall": [{"id": "maps_presence", "title": "Business footprint", "points": -10}, {"id": "job_posting", "title": "Listed on Google Jobs", "points": -6}, {"id": "recruiter", "title": "Recruiter e-mail", "points": 5}], "panels": {"place": null, "near": [{"title": "Nimbus Tutorials", "rating": 4.6, "reviews": 14, "address": "Hanamkonda, Warangal, Telangana 506001", "phone": null, "website": null, "type": "Tutoring service", "data_id": "0x3bcb6d4e15a3:0x0567d444d7", "lat": null, "lng": null, "open_state": null, "match": 0.69, "link": "https://www.google.com/maps/search/?api=1&query=Nimbus%20Tutorials%20Hanamkonda%2C%20Warangal%2C%20Telangana%20506001"}], "jobs": [], "message": null, "web": [{"title": "Warangal jobs today: office assistant openings", "link": "https://www.localjobs-tg.in/warangal", "host": "localjobs-tg.in", "snippet": "Latest office assistant jobs in Warangal with salary details.", "kind": "Website", "relevant": false, "official": false, "flag": "none", "terms": [], "date": null}], "news": []}, "next_steps": [{"title": "Collect more information", "body": "Ask for the official website, a registered address and a contact number, then run the check again."}, {"title": "Do not pay yet", "body": "With so little public data, treat any payment request as unverified."}], "trace": [{"step": 1, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "Nimbus Ventures LLP Warangal", "status": "ok", "ms": 449, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 2, "engine": "google_jobs", "engine_label": "Google Jobs", "purpose": "jobs", "query": "Office Assistant Nimbus Ventures LLP Warangal", "status": "empty", "ms": 813, "cached": false, "results": 0, "followup": false, "note": ""}, {"step": 3, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"Nimbus Ventures LLP\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 460, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 4, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"Nimbus Ventures LLP\"", "status": "empty", "ms": 777, "cached": false, "results": 0, "followup": false, "note": "no recorded data for this query"}], "usage": {"searches": 3, "cache_hits": 0, "engines": ["google", "google_jobs", "google_maps", "google_news"]}, "notes": []}, "shop-fake-headphones": {"id": "TL-CF56F214", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "shop", "mode_label": "Online shop", "source": "demo", "sample_id": "shop-fake-headphones", "inputs": {"name": "MegaDealz Outlet", "role": "", "location": "", "email": "", "url": "https://megadealz-official-outlet.top/product/sony-wh-1000xm5", "product": "Sony WH-1000XM5 wireless headphones", "price": "4999", "message": "FLASH SALE TODAY ONLY! 85% OFF. Only 3 pieces left. No COD, pay 100% advance to our personal UPI number and send screenshot on WhatsApp. No returns."}, "entity": "MegaDealz Outlet", "score": 3, "verdict": {"level": "high_risk", "label": "High risk", "headline": "Do not pay this store."}, "confidence": {"pct": 100, "level": "high"}, "summary": "TrustLens ran 5 searchs and found 4 red flags, 2 cautions and 0 reassuring signals. The biggest factor: 5 scam patterns found in the message.", "summary_source": "rules", "reasons": [{"signal_id": "message", "title": "What they asked of you", "text": "5 scam patterns found in the message", "points": -35}, {"signal_id": "price", "title": "Price against the market", "text": "80% below the market median", "points": -26}, {"signal_id": "web", "title": "Scam and complaint reports", "text": "4 pages link “MegaDealz Outlet” to scam or fraud reports", "points": -24}], "counts": {"fail": 4, "warn": 2, "pass": 0, "unknown": 1}, "signals": [{"id": "price", "category": "market", "title": "Price against the market", "status": "fail", "points": -26, "finding": "80% below the market median", "detail": "Genuine sellers cannot sustain prices this far below everyone else. A price this low is bait.", "evidence": [{"label": "Listed price", "value": "₹4,999"}, {"label": "Market median", "value": "₹25,240"}, {"label": "Range on Google Shopping", "value": "₹21,990 to ₹29,990"}, {"label": "Sellers compared", "value": "8"}], "weight": 26, "engines": ["google_shopping"], "optional": false, "critical": true, "absence": false}, {"id": "seller", "category": "market", "title": "Known seller", "status": "warn", "points": -4, "finding": "Not among the 8 sellers Google Shopping lists", "detail": "Established stores usually appear in Shopping results. Absence is not proof of a scam but adds doubt.", "evidence": [], "weight": 14, "engines": ["google_shopping"], "optional": false, "critical": false, "absence": true}, {"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "warn", "points": -2, "finding": "No physical or business listing found for this store", "detail": "Many honest online stores have no shop front, so this is only a light concern.", "evidence": [], "weight": 8, "engines": ["google_maps"], "optional": false, "critical": false, "absence": true}, {"id": "url", "category": "behaviour", "title": "Website address", "status": "fail", "points": -15, "finding": "4 warning signs in the web address", "detail": "The domain has several traits common to fake shops.", "evidence": [{"label": "Domain", "value": "megadealz-official-outlet.top"}, {"label": "Cheap '.top' domain ending", "value": "Not proof of fraud, but very common on throw-away shops."}, {"label": "Several hyphens in the domain", "value": "Long hyphenated names are typical of quickly-made scam sites."}, {"label": "'Official / outlet / clearance' in the name", "value": "Scam shops add these words to look authentic. Real brands rarely need to."}, {"label": "Unusually long domain", "value": "Very long domains are hard to verify by eye."}], "weight": 24, "engines": [], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "fail", "points": -35, "finding": "5 scam patterns found in the message", "detail": "Paying an individual UPI ID or QR removes all buyer protection. Legitimate stores use a payment gateway. Demanding all the money first with no cash-on-delivery is how fake stores avoid accountability.", "evidence": [{"label": "Payment to a personal UPI / QR", "value": "“UPI number”"}, {"label": "Full advance payment, no COD", "value": "“No COD”"}, {"label": "No returns or refunds", "value": "“No returns”"}, {"label": "Extreme discount", "value": "“85% OFF”"}, {"label": "Countdown / scarcity pressure", "value": "“FLASH SALE”"}], "weight": 35, "engines": [], "optional": false, "critical": true, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "fail", "points": -24, "finding": "4 pages link “MegaDealz Outlet” to scam or fraud reports", "detail": "Independent pages describe the same pattern. Multiple unrelated reports are a strong warning. A follow-up search on forums and consumer-complaint pages confirmed it.", "evidence": [{"label": "Complaint site: consumer-complaints-board.in", "value": "MegaDealz Outlet reviews: fake shop? Customers report not receiving orders", "url": "https://www.consumer-complaints-board.in/megadealz-outlet"}, {"label": "Scam checker: scamcheck-india.in", "value": "megadealz-official-outlet.top scam alert", "url": "https://www.scamcheck-india.in/megadealz-official-outlet-top"}, {"label": "Website: cybersafe-india.in", "value": "How to spot fake online stores selling branded electronics at 80% off", "url": "https://www.cybersafe-india.in/fake-online-stores"}], "weight": 24, "engines": ["google"], "optional": false, "critical": true, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "unknown", "points": 0, "finding": "No news coverage found", "detail": "Small businesses often have none, so this neither helps nor hurts.", "evidence": [], "weight": 16, "engines": ["google_news"], "optional": true, "critical": false, "absence": false}], "waterfall": [{"id": "message", "title": "What they asked of you", "points": -35}, {"id": "price", "title": "Price against the market", "points": -26}, {"id": "web", "title": "Scam and complaint reports", "points": -24}, {"id": "url", "title": "Website address", "points": -15}, {"id": "seller", "title": "Known seller", "points": -4}, {"id": "maps_presence", "title": "Business footprint", "points": -2}], "panels": {"prices": {"listed": 4999.0, "median": 25240.0, "min": 21990.0, "max": 29990.0, "q1": 23367.25, "q3": 27367.25, "ratio": 0.2, "items": [{"seller": "Bazaar24", "price": 21990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Black)", "link": "https://bazaar24.example/xm5"}, {"seller": "ElectroMart", "price": 22990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Silver)", "link": "https://electromart.example/xm5"}, {"seller": "TechNest", "price": 24499.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Midnight Blue)", "link": "https://technest.example/xm5"}, {"seller": "GadgetHub India", "price": 24990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://gadgethub.example/xm5"}, {"seller": "SoundStreet", "price": 25490.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Black)", "link": "https://soundstreet.example/xm5"}, {"seller": "KartBazaar", "price": 26999.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://kartbazaar.example/xm5"}, {"seller": "AudioVilla", "price": 27490.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://audiovilla.example/xm5"}, {"seller": "PlayNow Electronics", "price": 29990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://playnow.example/xm5"}]}, "place": null, "near": [], "url": {"host": "megadealz-official-outlet.top", "registrable": "megadealz-official-outlet.top", "flags": [{"id": "risky_tld", "label": "Cheap '.top' domain ending", "points": 4, "why": "Not proof of fraud, but very common on throw-away shops."}, {"id": "hyphens", "label": "Several hyphens in the domain", "points": 4, "why": "Long hyphenated names are typical of quickly-made scam sites."}, {"id": "promo_words", "label": "'Official / outlet / clearance' in the name", "points": 5, "why": "Scam shops add these words to look authentic. Real brands rarely need to."}, {"id": "long_label", "label": "Unusually long domain", "points": 2, "why": "Very long domains are hard to verify by eye."}], "penalty": 15, "clean": false}, "message": {"flags": [{"id": "personal_upi", "label": "Payment to a personal UPI / QR", "severity": "high", "why": "Paying an individual UPI ID or QR removes all buyer protection. Legitimate stores use a payment gateway.", "points": 18, "critical": true, "matches": ["UPI number", "send screenshot"]}, {"id": "advance_only", "label": "Full advance payment, no COD", "severity": "high", "why": "Demanding all the money first with no cash-on-delivery is how fake stores avoid accountability.", "points": 16, "critical": false, "matches": ["No COD"]}, {"id": "no_returns", "label": "No returns or refunds", "severity": "medium", "why": "Established sellers publish a return policy.", "points": 6, "critical": false, "matches": ["No returns"]}, {"id": "mega_discount", "label": "Extreme discount", "severity": "medium", "why": "Discounts of 80-90% on branded goods are a bait signal.", "points": 6, "critical": false, "matches": ["85% OFF"]}, {"id": "pressure", "label": "Countdown / scarcity pressure", "severity": "low", "why": "'Only 3 left' and 'today only' push you to pay before you think.", "points": 3, "critical": false, "matches": ["FLASH SALE", "TODAY ONLY", "Only 3 pieces"]}], "highlights": [{"start": 0, "end": 10, "text": "FLASH SALE", "rule": "pressure", "label": "Countdown / scarcity pressure", "severity": "low"}, {"start": 11, "end": 21, "text": "TODAY ONLY", "rule": "pressure", "label": "Countdown / scarcity pressure", "severity": "low"}, {"start": 23, "end": 30, "text": "85% OFF", "rule": "mega_discount", "label": "Extreme discount", "severity": "medium"}, {"start": 32, "end": 45, "text": "Only 3 pieces", "rule": "pressure", "label": "Countdown / scarcity pressure", "severity": "low"}, {"start": 52, "end": 58, "text": "No COD", "rule": "advance_only", "label": "Full advance payment, no COD", "severity": "high"}, {"start": 93, "end": 103, "text": "UPI number", "rule": "personal_upi", "label": "Payment to a personal UPI / QR", "severity": "high"}, {"start": 108, "end": 123, "text": "send screenshot", "rule": "personal_upi", "label": "Payment to a personal UPI / QR", "severity": "high"}, {"start": 137, "end": 147, "text": "No returns", "rule": "no_returns", "label": "No returns or refunds", "severity": "medium"}], "penalty": 35, "critical": true, "text": "FLASH SALE TODAY ONLY! 85% OFF. Only 3 pieces left. No COD, pay 100% advance to our personal UPI number and send screenshot on WhatsApp. No returns."}, "web": [{"title": "MegaDealz Outlet reviews: fake shop? Customers report not receiving orders", "link": "https://www.consumer-complaints-board.in/megadealz-outlet", "host": "consumer-complaints-board.in", "snippet": "Customers say MegaDealz Outlet took payment for headphones and never delivered. Fake website, avoid.", "kind": "Complaint site", "relevant": true, "official": false, "flag": "strong", "terms": ["fake"], "date": null}, {"title": "megadealz-official-outlet.top scam alert", "link": "https://www.scamcheck-india.in/megadealz-official-outlet-top", "host": "scamcheck-india.in", "snippet": "This site was created recently and copies product photos from real stores. MegaDealz Outlet shows several scam indicators.", "kind": "Scam checker", "relevant": true, "official": false, "flag": "strong", "terms": ["scam"], "date": null}, {"title": "How to spot fake online stores selling branded electronics at 80% off", "link": "https://www.cybersafe-india.in/fake-online-stores", "host": "cybersafe-india.in", "snippet": "Sites like megadealz-official-outlet.top ask for full advance payment on personal UPI IDs and never ship the product.", "kind": "Website", "relevant": true, "official": false, "flag": "strong", "terms": ["fake"], "date": null}, {"title": "r/scams_india: MegaDealz Outlet headphones never arrived", "link": "https://www.reddit.com/r/scams_india/comments/megadealz", "host": "reddit.com", "snippet": "Ordered from MegaDealz Outlet after an Instagram ad, paid by UPI, no delivery, no reply. Fraud.", "kind": "Forum", "relevant": true, "official": false, "flag": "strong", "terms": ["fraud"], "date": null}], "news": []}, "next_steps": [{"title": "Do not pay this store", "body": "If you already paid by UPI or card, contact your bank immediately and report at cybercrime.gov.in or on 1930."}, {"title": "Buy from a marketplace with buyer protection", "body": "Use a seller Google Shopping already lists, and prefer cash on delivery or card payment."}, {"title": "Report and warn others", "body": "Report to the National Consumer Helpline (1915) or cybercrime.gov.in, and warn the group that forwarded this to you."}, {"title": "Compare with a known seller", "body": "Open the top Google Shopping seller for the same product and check the price and warranty."}], "trace": [{"step": 1, "engine": "google_shopping", "engine_label": "Google Shopping", "purpose": "shopping", "query": "Sony WH-1000XM5 wireless headphones", "status": "ok", "ms": 1277, "cached": false, "results": 8, "followup": false, "note": ""}, {"step": 2, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "MegaDealz Outlet", "status": "empty", "ms": 430, "cached": false, "results": 0, "followup": false, "note": ""}, {"step": 3, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"MegaDealz Outlet\" OR \"megadealz-official-outlet.top\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 602, "cached": false, "results": 3, "followup": false, "note": ""}, {"step": 4, "engine": "google", "engine_label": "Google Search", "purpose": "followup", "query": "MegaDealz Outlet reddit OR quora OR \"consumer complaint\" experience", "status": "ok", "ms": 1204, "cached": false, "results": 1, "followup": true, "note": ""}, {"step": 5, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"MegaDealz Outlet\"", "status": "empty", "ms": 505, "cached": false, "results": 0, "followup": false, "note": ""}], "usage": {"searches": 5, "cache_hits": 0, "engines": ["google", "google_maps", "google_news", "google_shopping"]}, "notes": []}, "shop-legit-headphones": {"id": "TL-D2560161", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "shop", "mode_label": "Online shop", "source": "demo", "sample_id": "shop-legit-headphones", "inputs": {"name": "UrbanCart India", "role": "", "location": "", "email": "", "url": "https://www.urbancart.in/p/sony-wh-1000xm5", "product": "Sony WH-1000XM5 wireless headphones", "price": "24990", "message": ""}, "entity": "UrbanCart India", "score": 97, "verdict": {"level": "trustworthy", "label": "Looks legitimate", "headline": "No serious warning signs found for this store."}, "confidence": {"pct": 100, "level": "high"}, "summary": "TrustLens ran 4 searchs and found 0 red flags, 0 cautions and 6 reassuring signals. The biggest factor: “UrbanCart India” is a listed Google Shopping seller.", "summary_source": "rules", "reasons": [{"signal_id": "seller", "title": "Known seller", "text": "“UrbanCart India” is a listed Google Shopping seller", "points": 14}, {"signal_id": "price", "title": "Price against the market", "text": "Price is in line with the market", "points": 10}, {"signal_id": "web", "title": "Scam and complaint reports", "text": "4 relevant pages found, none report scams", "points": 10}], "counts": {"fail": 0, "warn": 0, "pass": 6, "unknown": 2}, "signals": [{"id": "price", "category": "market", "title": "Price against the market", "status": "pass", "points": 10, "finding": "Price is in line with the market", "detail": "The listed price sits inside the range charged by comparable sellers.", "evidence": [{"label": "Listed price", "value": "₹24,990"}, {"label": "Market median", "value": "₹25,240"}, {"label": "Range on Google Shopping", "value": "₹22,990 to ₹29,990"}, {"label": "Sellers compared", "value": "8"}], "weight": 26, "engines": ["google_shopping"], "optional": false, "critical": false, "absence": false}, {"id": "seller", "category": "market", "title": "Known seller", "status": "pass", "points": 14, "finding": "“UrbanCart India” is a listed Google Shopping seller", "detail": "The store appears among sellers that Google itself lists for this product.", "evidence": [{"label": "UrbanCart India", "value": "₹24,990", "url": "https://www.urbancart.in/p/sony-wh-1000xm5"}], "weight": 14, "engines": ["google_shopping"], "optional": false, "critical": false, "absence": false}, {"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "pass", "points": 8, "finding": "Found “UrbanCart India” on Google Maps", "detail": "A real, findable location or business profile is hard to fake at scale. It is one of the strongest identity signals available in public search.", "evidence": [{"label": "Listed as", "value": "UrbanCart India"}, {"label": "Address", "value": "Kondapur, Hyderabad, Telangana 500084"}, {"label": "Category", "value": "Electronics store"}, {"label": "Open on Google Maps", "value": "view listing", "url": "https://www.google.com/maps/search/?api=1&query=UrbanCart%20India%20Kondapur%2C%20Hyderabad%2C%20Telangana%20500084"}], "weight": 8, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "maps_reputation", "category": "reputation", "title": "Public reviews", "status": "pass", "points": 8, "finding": "4.3★ from 1,208 reviews", "detail": "A high rating backed by many independent reviews is expensive for fraudsters to imitate.", "evidence": [{"label": "Rating", "value": "4.3 out of 5"}, {"label": "Number of reviews", "value": "1,208"}], "weight": 10, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "url", "category": "behaviour", "title": "Website address", "status": "pass", "points": 6, "finding": "Web address looks ordinary", "detail": "Clean domain with a common ending. This is a weak positive on its own.", "evidence": [{"label": "Domain", "value": "urbancart.in"}], "weight": 24, "engines": [], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "unknown", "points": 0, "finding": "No message pasted", "detail": "Paste the offer or chat text and TrustLens will highlight known scam phrases.", "evidence": [], "weight": 35, "engines": [], "optional": true, "critical": false, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "pass", "points": 10, "finding": "4 relevant pages found, none report scams", "detail": "The name shows up across the web with no scam or fraud warnings attached.", "evidence": [{"label": "Website: urbancart.in", "value": "UrbanCart India: official store", "url": "https://www.urbancart.in/"}, {"label": "Review site: reviewhub.in", "value": "UrbanCart India reviews and customer ratings", "url": "https://www.reviewhub.in/urbancart-india"}, {"label": "Website: urbancart.in", "value": "UrbanCart India return policy", "url": "https://www.urbancart.in/returns"}], "weight": 24, "engines": ["google"], "optional": false, "critical": false, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "unknown", "points": 0, "finding": "No news coverage found", "detail": "Small businesses often have none, so this neither helps nor hurts.", "evidence": [], "weight": 16, "engines": ["google_news"], "optional": true, "critical": false, "absence": false}], "waterfall": [{"id": "seller", "title": "Known seller", "points": 14}, {"id": "price", "title": "Price against the market", "points": 10}, {"id": "web", "title": "Scam and complaint reports", "points": 10}, {"id": "maps_presence", "title": "Business footprint", "points": 8}, {"id": "maps_reputation", "title": "Public reviews", "points": 8}, {"id": "url", "title": "Website address", "points": 6}], "panels": {"prices": {"listed": 24990.0, "median": 25240.0, "min": 22990.0, "max": 29990.0, "q1": 24621.75, "q3": 27367.25, "ratio": 0.99, "items": [{"seller": "ElectroMart", "price": 22990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Silver)", "link": "https://electromart.example/xm5"}, {"seller": "TechNest", "price": 24499.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Midnight Blue)", "link": "https://technest.example/xm5"}, {"seller": "UrbanCart India", "price": 24990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://www.urbancart.in/p/sony-wh-1000xm5"}, {"seller": "GadgetHub India", "price": 24990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://gadgethub.example/xm5"}, {"seller": "SoundStreet", "price": 25490.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Black)", "link": "https://soundstreet.example/xm5"}, {"seller": "KartBazaar", "price": 26999.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://kartbazaar.example/xm5"}, {"seller": "AudioVilla", "price": 27490.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://audiovilla.example/xm5"}, {"seller": "PlayNow Electronics", "price": 29990.0, "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones", "link": "https://playnow.example/xm5"}]}, "place": {"title": "UrbanCart India", "rating": 4.3, "reviews": 1208, "address": "Kondapur, Hyderabad, Telangana 500084", "phone": "+91 40 5550 9090", "website": "https://www.urbancart.in", "type": "Electronics store", "data_id": "0x3bcb16660690:0x633bcdb0b9", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=UrbanCart%20India%20Kondapur%2C%20Hyderabad%2C%20Telangana%20500084"}, "near": [{"title": "UrbanCart India", "rating": 4.3, "reviews": 1208, "address": "Kondapur, Hyderabad, Telangana 500084", "phone": "+91 40 5550 9090", "website": "https://www.urbancart.in", "type": "Electronics store", "data_id": "0x3bcb16660690:0x633bcdb0b9", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=UrbanCart%20India%20Kondapur%2C%20Hyderabad%2C%20Telangana%20500084"}], "url": {"host": "urbancart.in", "registrable": "urbancart.in", "flags": [], "penalty": 0, "clean": true}, "message": null, "web": [{"title": "UrbanCart India: official store", "link": "https://www.urbancart.in/", "host": "urbancart.in", "snippet": "Shop laptops, audio and phones from UrbanCart India with 7-day easy returns.", "kind": "Website", "relevant": true, "official": true, "flag": "none", "terms": [], "date": null}, {"title": "UrbanCart India reviews and customer ratings", "link": "https://www.reviewhub.in/urbancart-india", "host": "reviewhub.in", "snippet": "Buyers praise fast delivery and easy returns at UrbanCart India.", "kind": "Review site", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}, {"title": "UrbanCart India return policy", "link": "https://www.urbancart.in/returns", "host": "urbancart.in", "snippet": "Return most items within 7 days of delivery.", "kind": "Website", "relevant": true, "official": true, "flag": "none", "terms": [], "date": null}, {"title": "Is UrbanCart India safe? Store check", "link": "https://www.companycheck.in/urbancart-india", "host": "companycheck.in", "snippet": "UrbanCart India has traded since 2016 and is GST registered. No scam reports found.", "kind": "Website", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}], "news": []}, "next_steps": [{"title": "Still confirm the basics", "body": "Check that the phone number and e-mail you were given match the ones on the official listing."}, {"title": "Keep records", "body": "Save the offer letter, invoice or receipt in case anything changes later."}], "trace": [{"step": 1, "engine": "google_shopping", "engine_label": "Google Shopping", "purpose": "shopping", "query": "Sony WH-1000XM5 wireless headphones", "status": "ok", "ms": 1277, "cached": false, "results": 8, "followup": false, "note": ""}, {"step": 2, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "UrbanCart India", "status": "ok", "ms": 758, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 3, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"UrbanCart India\" OR \"urbancart.in\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 1207, "cached": false, "results": 4, "followup": false, "note": ""}, {"step": 4, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"UrbanCart India\"", "status": "empty", "ms": 684, "cached": false, "results": 0, "followup": false, "note": ""}], "usage": {"searches": 4, "cache_hits": 0, "engines": ["google", "google_maps", "google_news", "google_shopping"]}, "notes": []}, "local-coaching-advance": {"id": "TL-4802B44E", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "local", "mode_label": "Local business", "source": "demo", "sample_id": "local-coaching-advance", "inputs": {"name": "BrightPath IAS Academy", "role": "", "location": "New Delhi", "email": "", "url": "", "product": "", "price": "", "message": "They want 100% advance payment of ₹85,000, promise guaranteed selection, and say no refund under any condition."}, "entity": "BrightPath IAS Academy", "score": 3, "verdict": {"level": "high_risk", "label": "High risk", "headline": "Do not pay in advance."}, "confidence": {"pct": 100, "level": "high"}, "summary": "TrustLens ran 5 searchs and found 5 red flags, 0 cautions and 2 reassuring signals. The biggest factor: 3 scam patterns found in the message.", "summary_source": "rules", "reasons": [{"signal_id": "message", "title": "What they asked of you", "text": "3 scam patterns found in the message", "points": -35}, {"signal_id": "web", "title": "Scam and complaint reports", "text": "3 pages link “BrightPath IAS Academy” to scam or fraud reports", "points": -24}, {"signal_id": "reviews", "title": "What unhappy customers say", "text": "4 of the lowest-rated reviews describe fraud, refunds or false promises", "points": -16}], "counts": {"fail": 5, "warn": 0, "pass": 2, "unknown": 0}, "signals": [{"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "pass", "points": 16, "finding": "Found “BrightPath IAS Academy” on Google Maps", "detail": "A real, findable location or business profile is hard to fake at scale. It is one of the strongest identity signals available in public search.", "evidence": [{"label": "Listed as", "value": "BrightPath IAS Academy"}, {"label": "Address", "value": "Old Rajinder Nagar, New Delhi, Delhi 110060"}, {"label": "Category", "value": "Coaching centre"}, {"label": "Open on Google Maps", "value": "view listing", "url": "https://www.google.com/maps/search/?api=1&query=BrightPath%20IAS%20Academy%20Old%20Rajinder%20Nagar%2C%20New%20Delhi%2C%20Delhi%20110060"}], "weight": 18, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "maps_reputation", "category": "reputation", "title": "Public reviews", "status": "fail", "points": -14, "finding": "Poor rating: 2.6★ from 48 reviews", "detail": "A low score across many reviews is a strong warning sign.", "evidence": [{"label": "Rating", "value": "2.6 out of 5"}, {"label": "Number of reviews", "value": "48"}], "weight": 14, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "contact", "category": "identity", "title": "Contact details", "status": "pass", "points": 6, "finding": "Phone, website and address are all published", "detail": "Traceable contact details make it possible to hold a business accountable.", "evidence": [{"label": "Phone", "value": "+91 11 5550 3344"}, {"label": "Website", "value": "http://brightpathias.in"}, {"label": "Address", "value": "Old Rajinder Nagar, New Delhi, Delhi 110060"}], "weight": 6, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "reviews", "category": "reputation", "title": "What unhappy customers say", "status": "fail", "points": -16, "finding": "4 of the lowest-rated reviews describe fraud, refunds or false promises", "detail": "TrustLens read the lowest-rated reviews. The same complaints repeat, which points to a pattern rather than a one-off.", "evidence": [{"label": "1★ review", "value": "“Paid the full fee in advance because they promised guaranteed selection. Classes were cancelled and they refus”"}, {"label": "1★ review", "value": "“Teachers changed every month. Asked for a refund within a week and got abused on the phone. Waste of money.”"}, {"label": "2★ review", "value": "“Fake promises about results. The brochure batch never started.”"}], "weight": 16, "engines": ["google_maps_reviews"], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "fail", "points": -35, "finding": "3 scam patterns found in the message", "detail": "'Guaranteed selection / placement / cure' cannot be honestly promised by any genuine service. Asking for the entire fee before any service is delivered removes your leverage if things go wrong.", "evidence": [{"label": "Guaranteed results", "value": "“guaranteed selection”"}, {"label": "Full payment upfront", "value": "“100% advance payment”"}, {"label": "Refuses refunds", "value": "“no refund”"}], "weight": 35, "engines": [], "optional": false, "critical": true, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "fail", "points": -24, "finding": "3 pages link “BrightPath IAS Academy” to scam or fraud reports", "detail": "Independent pages describe the same pattern. Multiple unrelated reports are a strong warning. A follow-up search on forums and consumer-complaint pages confirmed it.", "evidence": [{"label": "Complaint site: consumer-complaints-board.in", "value": "BrightPath IAS Academy fraud? Students allege fee not refunded", "url": "https://www.consumer-complaints-board.in/brightpath-ias-academy"}, {"label": "Forum: forum.upsc-aspirants.in", "value": "Beware of BrightPath IAS Academy advance fee offer", "url": "https://forum.upsc-aspirants.in/t/brightpath-advance-fee"}, {"label": "Forum: reddit.com", "value": "r/UPSC: BrightPath IAS Academy refund experience", "url": "https://www.reddit.com/r/UPSC/comments/brightpath"}], "weight": 24, "engines": ["google"], "optional": false, "critical": true, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "fail", "points": -16, "finding": "2 negative news stories", "detail": "Headlines mention fraud, penalties, raids or similar problems.", "evidence": [{"label": "Capital Times, 3 weeks ago", "value": "Consumer commission directs coaching institute to refund ₹85,000 to aspirant", "url": "https://capitaltimes.example/coaching-refund"}, {"label": "Metro Post, 2 months ago", "value": "BrightPath IAS Academy faces student protest over refund", "url": "https://metropost.example/brightpath-protest"}], "weight": 16, "engines": ["google_news"], "optional": false, "critical": false, "absence": false}], "waterfall": [{"id": "message", "title": "What they asked of you", "points": -35}, {"id": "web", "title": "Scam and complaint reports", "points": -24}, {"id": "maps_presence", "title": "Business footprint", "points": 16}, {"id": "reviews", "title": "What unhappy customers say", "points": -16}, {"id": "news", "title": "News coverage", "points": -16}, {"id": "maps_reputation", "title": "Public reviews", "points": -14}, {"id": "contact", "title": "Contact details", "points": 6}], "panels": {"place": {"title": "BrightPath IAS Academy", "rating": 2.6, "reviews": 48, "address": "Old Rajinder Nagar, New Delhi, Delhi 110060", "phone": "+91 11 5550 3344", "website": "http://brightpathias.in", "type": "Coaching centre", "data_id": "0x3bcb63532c08:0xfaa19bef0b", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=BrightPath%20IAS%20Academy%20Old%20Rajinder%20Nagar%2C%20New%20Delhi%2C%20Delhi%20110060"}, "near": [{"title": "BrightPath IAS Academy", "rating": 2.6, "reviews": 48, "address": "Old Rajinder Nagar, New Delhi, Delhi 110060", "phone": "+91 11 5550 3344", "website": "http://brightpathias.in", "type": "Coaching centre", "data_id": "0x3bcb63532c08:0xfaa19bef0b", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=BrightPath%20IAS%20Academy%20Old%20Rajinder%20Nagar%2C%20New%20Delhi%2C%20Delhi%20110060"}], "reviews": [{"rating": 1, "text": "Paid the full fee in advance because they promised guaranteed selection. Classes were cancelled and they refuse to refund. Total fraud.", "date": "2 months ago", "user": "Aditya M.", "terms": ["fraud", "refund", "advance"]}, {"rating": 1, "text": "Teachers changed every month. Asked for a refund within a week and got abused on the phone. Waste of money.", "date": "4 months ago", "user": "Neha R.", "terms": ["refund", "waste of money"]}, {"rating": 2, "text": "Fake promises about results. The brochure batch never started.", "date": "5 months ago", "user": "Sandeep T.", "terms": ["fake"]}, {"rating": 1, "text": "They cheated many students with the advance fee scheme. Please stay away.", "date": "6 months ago", "user": "Kavya J.", "terms": ["cheat", "cheated", "advance"]}, {"rating": 2, "text": "Study material was poor and nobody answers calls after admission.", "date": "8 months ago", "user": "Rohit B.", "terms": []}], "message": {"flags": [{"id": "guaranteed", "label": "Guaranteed results", "severity": "high", "why": "'Guaranteed selection / placement / cure' cannot be honestly promised by any genuine service.", "points": 14, "critical": true, "matches": ["guaranteed selection"]}, {"id": "advance_only", "label": "Full payment upfront", "severity": "high", "why": "Asking for the entire fee before any service is delivered removes your leverage if things go wrong.", "points": 14, "critical": false, "matches": ["100% advance payment"]}, {"id": "no_refund", "label": "Refuses refunds", "severity": "medium", "why": "A clear refund policy is normal for genuine institutions.", "points": 8, "critical": false, "matches": ["no refund", "refund under any"]}], "highlights": [{"start": 10, "end": 30, "text": "100% advance payment", "rule": "advance_only", "label": "Full payment upfront", "severity": "high"}, {"start": 51, "end": 71, "text": "guaranteed selection", "rule": "guaranteed", "label": "Guaranteed results", "severity": "high"}, {"start": 81, "end": 90, "text": "no refund", "rule": "no_refund", "label": "Refuses refunds", "severity": "medium"}], "penalty": 35, "critical": true, "text": "They want 100% advance payment of ₹85,000, promise guaranteed selection, and say no refund under any condition."}, "web": [{"title": "BrightPath IAS Academy fraud? Students allege fee not refunded", "link": "https://www.consumer-complaints-board.in/brightpath-ias-academy", "host": "consumer-complaints-board.in", "snippet": "Aspirants allege BrightPath IAS Academy collected full advance fees, promised guaranteed selection and refused refunds. Several call it a scam.", "kind": "Complaint site", "relevant": true, "official": false, "flag": "strong", "terms": ["scam", "fraud"], "date": null}, {"title": "Beware of BrightPath IAS Academy advance fee offer", "link": "https://forum.upsc-aspirants.in/t/brightpath-advance-fee", "host": "forum.upsc-aspirants.in", "snippet": "Do not pay the advance. BrightPath IAS Academy cheated multiple students in the last batch.", "kind": "Forum", "relevant": true, "official": false, "flag": "strong", "terms": ["cheated", "beware"], "date": null}, {"title": "r/UPSC: BrightPath IAS Academy refund experience", "link": "https://www.reddit.com/r/UPSC/comments/brightpath", "host": "reddit.com", "snippet": "Paid ₹85,000 to BrightPath IAS Academy. Guaranteed selection was a lie and they will not refund. Fraud.", "kind": "Forum", "relevant": true, "official": false, "flag": "strong", "terms": ["fraud"], "date": null}, {"title": "BrightPath IAS Academy: courses and fees", "link": "http://brightpathias.in/courses", "host": "brightpathias.in", "snippet": "Foundation and prelims batches at BrightPath IAS Academy.", "kind": "Website", "relevant": true, "official": true, "flag": "none", "terms": [], "date": null}], "news": [{"title": "Consumer commission directs coaching institute to refund ₹85,000 to aspirant", "link": "https://capitaltimes.example/coaching-refund", "source": "Capital Times", "date": "3 weeks ago", "snippet": "The order concerns BrightPath IAS Academy, which had promised guaranteed selection.", "tone": "negative", "terms": ["refund", "consumer commission"]}, {"title": "BrightPath IAS Academy faces student protest over refund", "link": "https://metropost.example/brightpath-protest", "source": "Metro Post", "date": "2 months ago", "snippet": "Students of BrightPath IAS Academy gathered outside the centre demanding refunds.", "tone": "negative", "terms": ["refund"]}]}, "next_steps": [{"title": "Do not pay in advance", "body": "Pay only against a written fee structure, a refund policy and a proper receipt."}, {"title": "Visit in person first", "body": "Meet staff at the address on the listing and ask for references from current customers."}, {"title": "Report and warn others", "body": "Report to the National Consumer Helpline (1915) or cybercrime.gov.in, and warn the group that forwarded this to you."}], "trace": [{"step": 1, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "BrightPath IAS Academy New Delhi", "status": "ok", "ms": 688, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 2, "engine": "google_maps_reviews", "engine_label": "Maps reviews", "purpose": "reviews", "query": "lowest-rated reviews of BrightPath IAS Academy", "status": "ok", "ms": 877, "cached": false, "results": 5, "followup": true, "note": ""}, {"step": 3, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"BrightPath IAS Academy\" OR \"brightpathias.in\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 723, "cached": false, "results": 3, "followup": false, "note": ""}, {"step": 4, "engine": "google", "engine_label": "Google Search", "purpose": "followup", "query": "BrightPath IAS Academy reddit OR quora OR \"consumer complaint\" experience", "status": "ok", "ms": 840, "cached": false, "results": 1, "followup": true, "note": ""}, {"step": 5, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"BrightPath IAS Academy\"", "status": "ok", "ms": 1274, "cached": false, "results": 2, "followup": false, "note": ""}], "usage": {"searches": 5, "cache_hits": 0, "engines": ["google", "google_maps", "google_maps_reviews", "google_news"]}, "notes": []}, "local-dental-clinic": {"id": "TL-2483E22B", "generated_at": "2026-10-10T03:00:46+00:00", "mode": "local", "mode_label": "Local business", "source": "demo", "sample_id": "local-dental-clinic", "inputs": {"name": "Green Leaf Dental Clinic", "role": "", "location": "Bengaluru", "email": "", "url": "", "product": "", "price": "", "message": ""}, "entity": "Green Leaf Dental Clinic", "score": 97, "verdict": {"level": "trustworthy", "label": "Looks legitimate", "headline": "No serious warning signs found for this business."}, "confidence": {"pct": 100, "level": "high"}, "summary": "TrustLens ran 4 searchs and found 0 red flags, 0 cautions and 5 reassuring signals. The biggest factor: found “Green Leaf Dental Clinic” on Google Maps.", "summary_source": "rules", "reasons": [{"signal_id": "maps_presence", "title": "Business footprint", "text": "Found “Green Leaf Dental Clinic” on Google Maps", "points": 16}, {"signal_id": "maps_reputation", "title": "Public reviews", "text": "4.8★ from 642 reviews", "points": 14}, {"signal_id": "web", "title": "Scam and complaint reports", "text": "3 relevant pages found, none report scams", "points": 10}], "counts": {"fail": 0, "warn": 0, "pass": 5, "unknown": 2}, "signals": [{"id": "maps_presence", "category": "identity", "title": "Business footprint", "status": "pass", "points": 16, "finding": "Found “Green Leaf Dental Clinic” on Google Maps", "detail": "A real, findable location or business profile is hard to fake at scale. It is one of the strongest identity signals available in public search.", "evidence": [{"label": "Listed as", "value": "Green Leaf Dental Clinic"}, {"label": "Address", "value": "12th Main, Indiranagar, Bengaluru, Karnataka 560038"}, {"label": "Category", "value": "Dental clinic"}, {"label": "Open on Google Maps", "value": "view listing", "url": "https://www.google.com/maps/search/?api=1&query=Green%20Leaf%20Dental%20Clinic%2012th%20Main%2C%20Indiranagar%2C%20Bengaluru%2C%20Karnataka%20560038"}], "weight": 18, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "maps_reputation", "category": "reputation", "title": "Public reviews", "status": "pass", "points": 14, "finding": "4.8★ from 642 reviews", "detail": "A high rating backed by many independent reviews is expensive for fraudsters to imitate.", "evidence": [{"label": "Rating", "value": "4.8 out of 5"}, {"label": "Number of reviews", "value": "642"}], "weight": 14, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "contact", "category": "identity", "title": "Contact details", "status": "pass", "points": 6, "finding": "Phone, website and address are all published", "detail": "Traceable contact details make it possible to hold a business accountable.", "evidence": [{"label": "Phone", "value": "+91 80 5550 2211"}, {"label": "Website", "value": "https://www.greenleafdental.in"}, {"label": "Address", "value": "12th Main, Indiranagar, Bengaluru, Karnataka 560038"}], "weight": 6, "engines": ["google_maps"], "optional": false, "critical": false, "absence": false}, {"id": "reviews", "category": "reputation", "title": "What unhappy customers say", "status": "pass", "points": 6, "finding": "Even the lowest-rated reviews contain no fraud or refund complaints", "detail": "The worst reviews are about ordinary matters such as waiting time, not about honesty.", "evidence": [], "weight": 16, "engines": ["google_maps_reviews"], "optional": false, "critical": false, "absence": false}, {"id": "message", "category": "behaviour", "title": "What they asked of you", "status": "unknown", "points": 0, "finding": "No message pasted", "detail": "Paste the offer or chat text and TrustLens will highlight known scam phrases.", "evidence": [], "weight": 35, "engines": [], "optional": true, "critical": false, "absence": false}, {"id": "web", "category": "coverage", "title": "Scam and complaint reports", "status": "pass", "points": 10, "finding": "3 relevant pages found, none report scams", "detail": "The name shows up across the web with no scam or fraud warnings attached.", "evidence": [{"label": "Website: greenleafdental.in", "value": "Green Leaf Dental Clinic, Indiranagar", "url": "https://www.greenleafdental.in/"}, {"label": "Website: clinic-directory.in", "value": "Green Leaf Dental Clinic reviews and appointments", "url": "https://www.clinic-directory.in/green-leaf-dental"}, {"label": "Website: healthbook.in", "value": "Green Leaf Dental Clinic: doctors and treatments", "url": "https://www.healthbook.in/green-leaf-dental-clinic"}], "weight": 24, "engines": ["google"], "optional": false, "critical": false, "absence": false}, {"id": "news", "category": "coverage", "title": "News coverage", "status": "unknown", "points": 0, "finding": "No news coverage found", "detail": "Small businesses often have none, so this neither helps nor hurts.", "evidence": [], "weight": 16, "engines": ["google_news"], "optional": true, "critical": false, "absence": false}], "waterfall": [{"id": "maps_presence", "title": "Business footprint", "points": 16}, {"id": "maps_reputation", "title": "Public reviews", "points": 14}, {"id": "web", "title": "Scam and complaint reports", "points": 10}, {"id": "contact", "title": "Contact details", "points": 6}, {"id": "reviews", "title": "What unhappy customers say", "points": 6}], "panels": {"place": {"title": "Green Leaf Dental Clinic", "rating": 4.8, "reviews": 642, "address": "12th Main, Indiranagar, Bengaluru, Karnataka 560038", "phone": "+91 80 5550 2211", "website": "https://www.greenleafdental.in", "type": "Dental clinic", "data_id": "0x3bcbb5ba666e:0x1d2132b288", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=Green%20Leaf%20Dental%20Clinic%2012th%20Main%2C%20Indiranagar%2C%20Bengaluru%2C%20Karnataka%20560038"}, "near": [{"title": "Green Leaf Dental Clinic", "rating": 4.8, "reviews": 642, "address": "12th Main, Indiranagar, Bengaluru, Karnataka 560038", "phone": "+91 80 5550 2211", "website": "https://www.greenleafdental.in", "type": "Dental clinic", "data_id": "0x3bcbb5ba666e:0x1d2132b288", "lat": null, "lng": null, "open_state": null, "match": 1.0, "link": "https://www.google.com/maps/search/?api=1&query=Green%20Leaf%20Dental%20Clinic%2012th%20Main%2C%20Indiranagar%2C%20Bengaluru%2C%20Karnataka%20560038"}], "reviews": [{"rating": 3, "text": "Had to wait 40 minutes past my appointment time, but the treatment itself was good.", "date": "1 month ago", "user": "Meera V.", "terms": []}, {"rating": 3, "text": "Parking is difficult nearby. The doctor was gentle and explained everything.", "date": "3 months ago", "user": "Arjun N.", "terms": []}, {"rating": 4, "text": "Front desk took a while to confirm my slot.", "date": "4 months ago", "user": "Sheela D.", "terms": []}], "message": null, "web": [{"title": "Green Leaf Dental Clinic, Indiranagar", "link": "https://www.greenleafdental.in/", "host": "greenleafdental.in", "snippet": "Family dentistry, braces and implants in Indiranagar, Bengaluru.", "kind": "Website", "relevant": true, "official": true, "flag": "none", "terms": [], "date": null}, {"title": "Green Leaf Dental Clinic reviews and appointments", "link": "https://www.clinic-directory.in/green-leaf-dental", "host": "clinic-directory.in", "snippet": "Patients rate Green Leaf Dental Clinic highly for hygiene and clear pricing.", "kind": "Website", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}, {"title": "Green Leaf Dental Clinic: doctors and treatments", "link": "https://www.healthbook.in/green-leaf-dental-clinic", "host": "healthbook.in", "snippet": "Book a check-up at Green Leaf Dental Clinic. Fees are listed upfront.", "kind": "Website", "relevant": true, "official": false, "flag": "none", "terms": [], "date": null}], "news": []}, "next_steps": [{"title": "Still confirm the basics", "body": "Check that the phone number and e-mail you were given match the ones on the official listing."}, {"title": "Keep records", "body": "Save the offer letter, invoice or receipt in case anything changes later."}], "trace": [{"step": 1, "engine": "google_maps", "engine_label": "Google Maps", "purpose": "maps", "query": "Green Leaf Dental Clinic Bengaluru", "status": "ok", "ms": 772, "cached": false, "results": 1, "followup": false, "note": ""}, {"step": 2, "engine": "google_maps_reviews", "engine_label": "Maps reviews", "purpose": "reviews", "query": "lowest-rated reviews of Green Leaf Dental Clinic", "status": "ok", "ms": 697, "cached": false, "results": 3, "followup": true, "note": ""}, {"step": 3, "engine": "google", "engine_label": "Google Search", "purpose": "web", "query": "\"Green Leaf Dental Clinic\" OR \"greenleafdental.in\" scam OR fraud OR fake OR complaints OR reviews", "status": "ok", "ms": 677, "cached": false, "results": 3, "followup": false, "note": ""}, {"step": 4, "engine": "google_news", "engine_label": "Google News", "purpose": "news", "query": "\"Green Leaf Dental Clinic\"", "status": "empty", "ms": 546, "cached": false, "results": 0, "followup": false, "note": ""}], "usage": {"searches": 4, "cache_hits": 0, "engines": ["google", "google_maps", "google_maps_reviews", "google_news"]}, "notes": []}}};
+</script>
+  <script>
+(() => {
+'use strict';
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+class Raw { constructor(s) { this.s = s; } }
+const raw = s => new Raw(String(s));
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const flat = v => (v === false || v == null) ? '' : Array.isArray(v) ? v.map(flat).join('') : v instanceof Raw ? v.s : esc(v);
+const html = (strings, ...vals) => new Raw(strings.reduce((a, s, i) => a + s + (i < vals.length ? flat(vals[i]) : ''), ''));
+const mount = (el, tpl) => { el.innerHTML = tpl.s; return el; };
+
+const ICONS = {
+  pin: '<path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  news: '<path d="M5 4h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2V4z"/><path d="M18 9h2a1 1 0 0 1 1 1v7a2 2 0 0 1-2 2M8 8h6M8 12h6M8 16h4"/>',
+  cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2.5l2.2 10.5a1 1 0 0 0 1 .8h8.6a1 1 0 0 0 1-.8L20 8H6.2"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.3A8 8 0 1 1 21 12z"/>',
+  building: '<path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M14 10h5a1 1 0 0 1 1 1v10M3 21h18M8 8h2M8 12h2M8 16h2"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', alert: '<path d="M12 4l9 16H3L12 4z"/><path d="M12 10v4M12 17.5v.01"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/>',
+  question: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/>',
+  chev: '<path d="M6 9l6 6 6-6"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
+  download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  printer: '<path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/><rect x="7" y="14" width="10" height="6"/>',
+  share: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>', play: '<path d="M7 5l12 7-12 7V5z"/>',
+};
+const ic = name => raw(`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`);
+
+const ENGINE_ICON = { google_maps: 'pin', google_maps_reviews: 'chat', google_jobs: 'briefcase', google_shopping: 'cart', google_news: 'news', google: 'search' };
+const ENGINE_LABEL = { google_maps: 'Google Maps', google_maps_reviews: 'Maps reviews', google_jobs: 'Google Jobs', google_shopping: 'Google Shopping', google_news: 'Google News', google: 'Google Search' };
+const VERDICT_LABEL = { high_risk: 'High risk', caution: 'Proceed with caution', trustworthy: 'Looks legitimate', insufficient: 'Not enough evidence' };
+const STATUS_ICON = { pass: 'check', warn: 'alert', fail: 'x', info: 'info', unknown: 'question' };
+const SHORT = { 'job-fake-wfh': 'Fake work-from-home offer', 'job-legit-analyst': 'Real analytics job', 'job-bpo-mixed': 'Shaky call-centre job',
+  'job-unknown': 'Tiny unknown firm', 'shop-fake-headphones': '80% off headphones', 'shop-legit-headphones': 'Established store',
+  'local-coaching-advance': 'Coaching asks full fee', 'local-dental-clinic': 'Neighbourhood clinic' };
+
+const fmtINR = n => '\u20b9' + Math.round(n).toLocaleString('en-IN');
+const fmtPts = p => p > 0 ? `+${p}` : p < 0 ? `\u2212${Math.abs(p)}` : '0';
+const ptsClass = p => p > 0 ? 'pos' : p < 0 ? 'neg' : 'zero';
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const fmtDate = iso => { try { return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }); } catch { return iso || ''; } };
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+const MODES = {
+  job: { label: 'Job offer', icon: 'briefcase',
+    intro: 'Enter what the offer says. Adding the recruiter e-mail and the message lets TrustLens check who is really writing to you.',
+    fields: [
+      { key: 'name', label: 'Company name', ph: 'e.g. Kestrel Analytics Pvt Ltd', req: true },
+      { key: 'role', label: 'Job title', ph: 'e.g. Junior Data Analyst', opt: true },
+      { key: 'location', label: 'City', ph: 'e.g. Hyderabad', opt: true },
+      { key: 'email', label: 'Recruiter e-mail', ph: 'e.g. careers@company.com', opt: true },
+      { key: 'message', label: 'The offer message', ph: 'Paste the WhatsApp, SMS or e-mail text here', opt: true, wide: true, area: true,
+        hint: 'TrustLens highlights phrases that match known job scams, such as fees and "no interview".' },
+    ] },
+  shop: { label: 'Online shop', icon: 'cart',
+    intro: 'Enter the store, the product and the price you were shown. The price is compared with Google Shopping sellers.',
+    fields: [
+      { key: 'name', label: 'Store name', ph: 'e.g. UrbanCart India', opt: true },
+      { key: 'url', label: 'Store link', ph: 'e.g. https://www.store.in/product', opt: true },
+      { key: 'product', label: 'Product', ph: 'e.g. Sony WH-1000XM5 headphones', opt: true },
+      { key: 'price', label: 'Price you were shown (\u20b9)', ph: 'e.g. 24990', opt: true },
+      { key: 'message', label: 'What the seller told you', ph: 'Paste the ad text, DM or WhatsApp chat', opt: true, wide: true, area: true,
+        hint: 'Payment demands like "personal UPI only" are flagged.' },
+    ] },
+  local: { label: 'Local business', icon: 'building',
+    intro: 'For coaching centres, clinics, contractors, agents and any business asking for money before service.',
+    fields: [
+      { key: 'name', label: 'Business name', ph: 'e.g. Green Leaf Dental Clinic', req: true },
+      { key: 'location', label: 'City', ph: 'e.g. Bengaluru', opt: true },
+      { key: 'message', label: 'What they asked you to do', ph: 'e.g. Pay the full fee in advance, no refund', opt: true, wide: true, area: true,
+        hint: 'Promises like "guaranteed selection" and full advance payment are flagged.' },
+    ] },
+};
+
+const SOURCES = [
+  { icon: 'pin', title: 'Google Maps', body: 'Does the business exist at a real address, and what do its customers say?' },
+  { icon: 'briefcase', title: 'Google Jobs', body: 'Is the role advertised publicly by the company that claims to be hiring?' },
+  { icon: 'cart', title: 'Google Shopping', body: 'How does the price compare with what other sellers charge for the same product?' },
+  { icon: 'search', title: 'Google Search', body: 'Do other pages link the name to scams or complaints? A follow-up search digs into forums when the first pass finds smoke.' },
+  { icon: 'news', title: 'Google News', body: 'Is there reputable coverage, good or bad, about this name?' },
+  { icon: 'chat', title: 'Maps reviews', body: 'What do the lowest-rated customers actually complain about?' },
+];
+
+const HOW = [
+  ['Describe it', 'Paste the offer, the link or the name. Add the message text if you have it, so TrustLens can highlight what they asked of you.'],
+  ['Plan the searches', 'TrustLens picks the SerpApi engines that fit the case and adds follow-up searches when the first results look suspicious.'],
+  ['Score the evidence', 'Each finding moves the score by a fixed, published amount. Missing data lowers the evidence coverage instead of being guessed.'],
+  ['Decide with proof', 'You get a verdict, the reasons, every source, and the exact steps to take next, including where to report a scam in India.'],
+];
+
+const SCORING = {
+  job: [
+    ['Business footprint', 'Google Maps', 12, -10, 'A matching business listing with an address.'],
+    ['Public reviews', 'Google Maps', 8, -10, 'Rating and number of reviews.'],
+    ['What unhappy customers say', 'Maps reviews', 6, -12, 'Fetched only when the rating is below 3.6.'],
+    ['Listed on Google Jobs', 'Google Jobs', 16, -6, 'A live posting from the same company.'],
+    ['Recruiter e-mail', 'Your input', 10, -16, 'Free-mail senders, look-alike domains, domain that does not match the company.'],
+    ['What they asked of you', 'Your input', 4, -35, 'Fees, WhatsApp-only, "no interview", Aadhaar requests, pressure.'],
+    ['Scam and complaint reports', 'Google Search', 10, -24, 'Pages linking the name to scams, with a follow-up on forums.'],
+    ['News coverage', 'Google News', 6, -16, 'Reputable stories, positive or negative.'],
+  ],
+  shop: [
+    ['Price against the market', 'Google Shopping', 10, -26, 'Listed price versus the median of comparable sellers.'],
+    ['Known seller', 'Google Shopping', 14, -4, 'Is the store one of Google\'s listed sellers?'],
+    ['Business footprint', 'Google Maps', 8, -2, 'Online-only stores are not penalised much.'],
+    ['Public reviews', 'Google Maps', 8, -10, 'Rating and number of reviews.'],
+    ['Website address', 'Your input', 6, -24, 'Look-alike brands, cheap endings, hyphens, missing HTTPS.'],
+    ['What they asked of you', 'Your input', 4, -35, 'Personal UPI, full advance, no returns, extreme discounts.'],
+    ['Scam and complaint reports', 'Google Search', 10, -24, 'Pages linking the store to scams, with a forum follow-up.'],
+    ['News coverage', 'Google News', 5, -16, 'Reputable stories, positive or negative.'],
+  ],
+  local: [
+    ['Business footprint', 'Google Maps', 16, -18, 'A local business that cannot be found is a serious flag.'],
+    ['Public reviews', 'Google Maps', 14, -14, 'Rating and number of reviews.'],
+    ['What unhappy customers say', 'Maps reviews', 6, -16, 'Repeated fraud or refund complaints in the lowest-rated reviews.'],
+    ['Contact details', 'Google Maps', 6, -6, 'Phone, website and address all published.'],
+    ['What they asked of you', 'Your input', 4, -35, 'Guaranteed results, full upfront payment, no refund, cash only.'],
+    ['Scam and complaint reports', 'Google Search', 10, -24, 'Pages linking the name to scams, with a forum follow-up.'],
+    ['News coverage', 'Google News', 5, -16, 'Reputable stories, positive or negative.'],
+  ],
+};
+
+const GROUPS = [['identity', 'Who they are'], ['reputation', 'What people say'], ['market', 'How it compares'], ['behaviour', 'How they behave'], ['coverage', 'What the web says']];
+const STATUS_ORDER = { fail: 0, warn: 1, info: 2, pass: 3, unknown: 4 };
+
+const SPECIMEN = [
+  'Congratulations! You are selected for Data Entry Executive at SwiftHire Global Services. ',
+  { t: 'No interview required.', tag: 'skips hiring' }, ' Earn \u20b94,000 daily by simple typing tasks. To confirm your seat, ',
+  { t: 'pay a refundable registration fee of \u20b92,499', tag: 'asks for money' }, ' and ',
+  { t: 'send your Aadhaar and bank details on WhatsApp only.', tag: 'wants your documents' }, ' ',
+  { t: 'Only 5 vacancies left, hurry!', tag: 'pressure' },
+];
+
+const state = { mode: 'job', sample: null, samples: [], api: null, forceDemo: false, running: false,
+  values: { job: {}, shop: {}, local: {} }, report: null, source: 'live' };
+const HKEY = 'trustlens.history.v1';
+
+async function init() {
+  renderTabs(); renderFields(); renderSources(); renderHow(); renderScoring('job'); renderSpecimen();
+  await detectBackend();
+  renderQuickSamples(); renderCases(); renderHistory(); updateCost();
+  bindGlobal();
+  const m = location.hash.match(/^#run=([\w-]+)/);
+  if (m) { const s = state.samples.find(x => x.id === m[1]); if (s) { applySample(s); run(); } }
+}
+
+async function detectBackend() {
+  const pill = $('#modePill');
+  const set = (cls, txt) => { pill.className = 'mode-pill ' + cls; $('.txt', pill).textContent = txt; };
+  try {
+    if (location.protocol === 'file:') throw new Error('static file');
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 1800);
+    const res = await fetch('/api/health', { cache: 'no-store', signal: ctl.signal }); clearTimeout(t);
+    if (!res.ok) throw new Error('no api');
+    state.api = await res.json();
+    state.samples = await (await fetch('/api/samples')).json();
+    if (state.api.live_available) {
+      set('live', `Live search on, ${state.api.searches_today}/${state.api.daily_limit} used today`);
+      $('#demoSwitchWrap').hidden = false;
+    } else { set('demo', 'Demo mode: recorded data'); }
+  } catch {
+    state.api = null;
+    state.samples = (window.TRUSTLENS_DEMO && window.TRUSTLENS_DEMO.samples) || [];
+    set('static', 'Offline demo: recorded cases');
+  }
+}
+
+function renderTabs() {
+  const tabs = $('#modeTabs');
+  mount(tabs, html`${Object.entries(MODES).map(([k, m]) => html`
+    <button type="button" class="tab" role="tab" id="tab-${k}" data-mode="${k}" aria-selected="${k === state.mode}" tabindex="${k === state.mode ? 0 : -1}">${ic(m.icon)}${m.label}</button>`)}`);
+  tabs.onclick = e => { const b = e.target.closest('.tab'); if (b) setMode(b.dataset.mode); };
+  tabs.onkeydown = e => {
+    const keys = Object.keys(MODES); let i = keys.indexOf(state.mode);
+    if (e.key === 'ArrowRight') i = (i + 1) % keys.length; else if (e.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else return;
+    e.preventDefault(); setMode(keys[i]); $(`#tab-${keys[i]}`).focus();
+  };
+}
+
+function setMode(mode) {
+  if (mode === state.mode) return;
+  stashValues(); state.mode = mode; state.sample = null;
+  renderTabs(); renderFields(); renderQuickSamples(); updateCost(); hideError();
+}
+function stashValues() { $$('#fields [name]').forEach(el => { state.values[state.mode][el.name] = el.value; }); }
+
+function renderFields() {
+  const m = MODES[state.mode], v = state.values[state.mode];
+  $('#modeIntro').textContent = m.intro;
+  mount($('#fields'), html`${m.fields.map(f => html`
+    <div class="field ${f.wide ? 'wide' : ''}">
+      <label for="f-${f.key}">${f.label}${f.opt ? html` <span class="opt">(optional)</span>` : ''}</label>
+      ${f.area
+        ? html`<textarea id="f-${f.key}" name="${f.key}" placeholder="${f.ph}" maxlength="4000">${v[f.key] || ''}</textarea>`
+        : html`<input id="f-${f.key}" name="${f.key}" type="text" placeholder="${f.ph}" value="${v[f.key] || ''}" maxlength="300" ${f.key === 'price' ? 'inputmode="numeric"' : ''}>`}
+      ${f.hint ? html`<span class="hint">${f.hint}</span>` : ''}
+    </div>`)}`);
+  $('#fields').oninput = () => { stashValues(); syncSample(); };
+}
+
+function syncSample() {
+  if (!state.sample) return;
+  const s = state.samples.find(x => x.id === state.sample);
+  const cur = state.values[state.mode];
+  const same = s && Object.entries(s.inputs).every(([k, val]) => (cur[k] || '') === val);
+  if (!same) { state.sample = null; $$('.sample-row .chip').forEach(c => c.classList.remove('active')); }
+}
+
+function renderQuickSamples() {
+  const list = state.samples.filter(s => s.mode === state.mode);
+  const row = $('#quickSamples');
+  if (!list.length) { row.hidden = true; return; }
+  row.hidden = false;
+  mount(row, html`<span class="lbl">Try a recorded case:</span>${list.map(s => html`
+    <button type="button" class="chip ${state.sample === s.id ? 'active' : ''}" data-id="${s.id}">${SHORT[s.id] || s.title}</button>`)}`);
+  row.onclick = e => { const c = e.target.closest('.chip'); if (c) applySample(state.samples.find(s => s.id === c.dataset.id)); };
+}
+
+function applySample(s) {
+  if (!s) return;
+  state.mode = s.mode; state.sample = s.id; state.values[s.mode] = { ...s.inputs };
+  renderTabs(); renderFields(); renderQuickSamples(); updateCost(); hideError();
+}
+
+function updateCost() {
+  const demo = !state.api || !state.api.live_available || state.forceDemo;
+  $('#costNote').textContent = demo ? 'Recorded data, no search credits used' : 'Uses about 4 to 6 searches';
+}
+
+function showError(msg) { const e = $('#formError'); e.textContent = msg; e.hidden = false; }
+function hideError() { $('#formError').hidden = true; }
+
+function collect() {
+  stashValues();
+  const v = { ...state.values[state.mode] }, out = {};
+  for (const f of MODES[state.mode].fields) out[f.key] = (v[f.key] || '').trim();
+  return out;
+}
+function validate(inputs) {
+  if (state.mode === 'shop' && !(inputs.name || inputs.url || inputs.product)) return 'Enter a store name, a store link or a product.';
+  if (state.mode === 'job' && inputs.name.length < 2) return 'Enter the company name from the job offer.';
+  if (state.mode === 'local' && inputs.name.length < 2) return 'Enter the business name.';
+  return '';
+}
+
+async function analyze(mode, inputs, sampleId) {
+  if (state.api) {
+    const res = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, inputs, sample_id: sampleId, demo: state.forceDemo }) });
+    const data = await res.json().catch(() => ({ error: 'The server sent an unexpected response.' }));
+    if (!res.ok) throw new Error(data.error || 'The check failed.');
+    return data;
+  }
+  const rep = window.TRUSTLENS_DEMO && window.TRUSTLENS_DEMO.reports && window.TRUSTLENS_DEMO.reports[sampleId];
+  if (sampleId && rep) return JSON.parse(JSON.stringify(rep));
+  throw new Error('This offline copy can only replay the recorded cases. Run "python run.py" and add a SerpApi key to check anything you like.');
+}
+
+async function run() {
+  if (state.running) return;
+  const inputs = collect(), problem = validate(inputs);
+  if (problem) { showError(problem); return; }
+  hideError(); state.running = true;
+  const btn = $('#runBtn'); btn.disabled = true; $('.btn-label', btn).textContent = 'Checking\u2026';
+  const section = $('#report'); section.hidden = false; $('#sheetMount').innerHTML = '';
+  renderTracePlanning();
+  section.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  try {
+    const report = await analyze(state.mode, inputs, state.sample);
+    await playTrace(report);
+    state.report = report; renderReport(report); saveHistory(report); renderHistory();
+  } catch (err) {
+    section.hidden = true; showError(err.message || 'Something went wrong. Try again.');
+    $('#checker').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+  } finally { state.running = false; btn.disabled = false; $('.btn-label', btn).textContent = 'Run the check'; }
+}
+
+function traceShell(sub, rows) {
+  return html`<div class="card trace">
+    <div class="trace-head"><h3>Search log</h3><span class="sub" id="traceSub">${sub}</span></div>
+    <div class="trace-list" id="traceList">${rows}</div></div>`;
+}
+function renderTracePlanning() {
+  mount($('#traceMount'), traceShell('Planning the searches\u2026', html`
+    <div class="trace-row pending"><span class="eng"><span class="spin"></span>TrustLens</span><span class="q">choosing which SerpApi engines fit this case</span><span class="t-meta"></span></div>`));
+}
+function traceRow(t, st) {
+  const done = st === 'done';
+  const meta = !done ? html`<span class="spin"></span>` : html`
+    ${t.followup && html`<span class="tag fu">follow-up</span>`}${t.cached && html`<span class="tag cache">cached</span>`}
+    <span>${t.status === 'ok' ? `${t.results} result${t.results === 1 ? '' : 's'}` : t.status === 'empty' ? 'no results' : 'failed'}, ${t.ms} ms</span>`;
+  return html`<div class="trace-row ${done ? 'done' : 'pending'}" data-step="${t.step}">
+    <span class="eng">${ic(ENGINE_ICON[t.engine] || 'search')}${t.engine_label || ENGINE_LABEL[t.engine] || t.engine}</span>
+    <span class="q">${t.query}</span><span class="t-meta">${meta}</span></div>`;
+}
+async function playTrace(report) {
+  const list = $('#traceList'); list.innerHTML = '';
+  const fast = reduced || report.source === 'live';
+  for (const t of report.trace) {
+    list.insertAdjacentHTML('beforeend', traceRow(t, 'pending').s);
+    const row = list.lastElementChild;
+    await sleep(fast ? 160 : Math.min(760, Math.max(360, t.ms * .55)));
+    row.outerHTML = traceRow(t, 'done').s;
+  }
+  const fu = report.trace.filter(t => t.followup).length, cached = report.trace.filter(t => t.cached).length;
+  $('#traceSub').textContent = `${report.trace.length} search${report.trace.length === 1 ? '' : 'es'}` + (fu ? `, ${fu} follow-up` : '') + (cached ? `, ${cached} from cache` : '');
+  const card = $('#traceList').closest('.trace');
+  card.insertAdjacentHTML('beforeend', html`<div class="trace-foot">Engines used: ${report.usage.engines.map(e => ENGINE_LABEL[e] || e).join(', ') || 'none'}. Billable searches: ${report.usage.searches}${report.source === 'demo' ? ' (recorded, none charged)' : ''}.</div>`.s);
+  await sleep(fast ? 120 : 380);
+}
+
+function link(url, text) {
+  const shown = text || url;
+  if (state.source === 'demo' || !/^https?:\/\//i.test(url || '')) {
+    return html`<span class="fake-link" ${state.source === 'demo' ? raw('title="Illustrative link from recorded demo data"') : ''}>${shown}</span>`;
+  }
+  return html`<a href="${url}" target="_blank" rel="noopener noreferrer nofollow">${shown}</a>`;
+}
+function highlightTerms(text, terms) {
+  const t = String(text || '');
+  if (!terms || !terms.length) return html`${t}`;
+  const re = new RegExp('(' + terms.map(reEsc).join('|') + ')\\w*', 'gi');
+  let out = '', last = 0, m;
+  while ((m = re.exec(t))) { out += esc(t.slice(last, m.index)) + `<mark>${esc(m[0])}</mark>`; last = m.index + m[0].length; }
+  return raw(out + esc(t.slice(last)));
+}
+function xray(text, highlights) {
+  const cps = Array.from(text || ''); let out = '', pos = 0;
+  for (const h of highlights || []) {
+    if (h.start < pos) continue;
+    out += esc(cps.slice(pos, h.start).join('')) + `<mark class="hl ${esc(h.severity)}" title="${esc(h.label)}">${esc(cps.slice(h.start, h.end).join(''))}</mark>`;
+    pos = h.end;
+  }
+  return raw(out + esc(cps.slice(pos).join('')));
+}
+
+function renderReport(r) {
+  state.source = r.source;
+  const p = r.panels || {}, lvl = r.verdict.level;
+  const banner = r.source === 'demo' && r.sample_id
+    ? 'Recorded demo data. Every business here is fictional and links are illustrative.' : (r.notes && r.notes[0]) || '';
+  const sheet = html`
+  <article class="card sheet" id="sheet" tabindex="-1" aria-label="TrustLens report for ${r.entity}">
+    <div class="sheet-head"><span><strong>${r.mode_label} check</strong></span><span>${r.entity}</span>
+      <span class="grow">Case ${r.id}, ${fmtDate(r.generated_at)}</span></div>
+    ${banner && html`<p class="banner">${banner}</p>`}
+    <div class="reading">
+      <div><div class="score-num ${lvl}" id="scoreNum">0</div><div class="score-of">out of 100</div></div>
+      <div class="range" aria-label="Score ${r.score} on a scale of 0 to 100">
+        <div class="range-bar"><span class="z z1"></span><span class="z z2"></span><span class="z z3"></span><span class="marker" id="marker"></span></div>
+        <div class="range-labels"><span class="l1">High risk</span><span class="l2">Caution</span><span class="l3">Looks legitimate</span></div></div>
+      <div class="stamp ${lvl}" id="stamp">${r.verdict.label}</div>
+    </div>
+    <div class="verdict-copy"><h2 class="headline">${r.verdict.headline}</h2><p class="summary">${r.summary}</p>
+      ${r.summary_source === 'claude' && html`<p class="src-note">Summary written by Claude from the findings below. It did not influence the score.</p>`}</div>
+    <div class="meta-row">
+      <div class="cov" title="How much of the picture TrustLens could see"><div class="cov-bar"><i style="width:${r.confidence.pct}%"></i></div><span class="cov-t">Evidence coverage ${r.confidence.pct}%</span></div>
+      <div class="counts">
+        ${r.counts.fail ? html`<span class="count fail">${ic('x')}${r.counts.fail} red flag${r.counts.fail > 1 ? 's' : ''}</span>` : ''}
+        ${r.counts.warn ? html`<span class="count warn">${ic('alert')}${r.counts.warn} caution${r.counts.warn > 1 ? 's' : ''}</span>` : ''}
+        ${r.counts.pass ? html`<span class="count pass">${ic('check')}${r.counts.pass} reassuring</span>` : ''}
+        ${r.counts.unknown ? html`<span class="count unknown">${ic('question')}${r.counts.unknown} no data</span>` : ''}
+      </div>
+      <div class="actions">
+        <button class="btn small" data-act="copy">${ic('copy')}Copy summary</button>
+        <button class="btn small" data-act="wa">${ic('share')}Share on WhatsApp</button>
+        <button class="btn small" data-act="json">${ic('download')}Download JSON</button>
+        <button class="btn small" data-act="print">${ic('printer')}Print</button>
+      </div>
+    </div>
+    <section class="block" aria-labelledby="whyH"><h3 id="whyH">How the score was built</h3>
+      <p class="sub">Every check starts at 50. Each finding below moved the score by the amount shown.</p>${waterfall(r)}</section>
+    <section class="block" aria-labelledby="findH"><h3 id="findH">Findings</h3>
+      <p class="sub">Open any row to see the reasoning and the evidence behind it.</p>
+      <div class="filters" id="filters">${filterButtons(r)}</div><div class="ledger" id="ledger">${ledger(r)}</div></section>
+    ${evidenceBlock(r, p)}
+    <section class="block" aria-labelledby="nextH"><h3 id="nextH">What to do next</h3>
+      <div class="next">${r.next_steps.map((s, i) => html`<label class="next-item"><input type="checkbox" id="ns${i}"><div><b>${s.title}</b><p>${s.body}</p></div></label>`)}</div>
+      ${(lvl === 'high_risk' || lvl === 'caution') && html`<div class="report-where"><span><b>1930</b>Cyber crime helpline</span><span><b>1915</b>National Consumer Helpline</span><span>cybercrime.gov.in</span></div>`}
+    </section>
+  </article>`;
+  mount($('#sheetMount'), sheet);
+  animateReport(r);
+  $('#sheet').focus({ preventScroll: true });
+  setTimeout(() => $('#sheetMount').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }), 60);
+}
+
+function animateReport(r) {
+  const num = $('#scoreNum'), marker = $('#marker'), stamp = $('#stamp');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    marker.style.left = r.score + '%'; stamp.classList.add('land');
+    $$('.wf-bar').forEach(b => { b.style.width = b.dataset.w; });
+  }));
+  if (reduced) { num.textContent = r.score; return; }
+  const t0 = performance.now(), dur = 1000;
+  const step = now => { const k = Math.min(1, (now - t0) / dur); num.textContent = Math.round(r.score * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+function waterfall(r) {
+  const rows = r.waterfall; if (!rows.length) return html`<p class="empty-note">No scored findings yet.</p>`;
+  const max = Math.max(...rows.map(x => Math.abs(x.points)), 10);
+  return html`<div class="wf" role="list">
+    ${rows.map(x => html`<div class="wf-row" role="listitem"><span>${x.title}</span>
+      <span class="wf-track"><span class="wf-bar ${x.points > 0 ? 'pos' : 'neg'}" data-w="${(Math.abs(x.points) / max) * 50}%"></span></span>
+      <span class="wf-val ${x.points > 0 ? 'pos' : 'neg'}">${fmtPts(x.points)}</span></div>`)}
+    <div class="wf-axis"><span></span><span class="mid"><span>Lowers trust</span><span>Raises trust</span></span><span></span></div>
+    <div class="wf-total"><span>Start at 50, add the findings${r.score !== 50 + rows.reduce((a, x) => a + x.points, 0) ? ' (kept between 3 and 97)' : ''}</span><b>${r.score}</b></div>
+  </div>`;
+}
+
+function filterButtons(r) {
+  const c = r.counts, all = r.signals.length;
+  const defs = [['all', `All (${all})`], ['fail', `Red flags (${c.fail})`], ['warn', `Cautions (${c.warn})`], ['pass', `Reassuring (${r.signals.filter(s => s.status === 'pass' || s.status === 'info').length})`], ['unknown', `No data (${c.unknown})`]];
+  return html`${defs.map(([k, l], i) => html`<button class="filter" data-f="${k}" aria-pressed="${i === 0}">${l}</button>`)}`;
+}
+
+function ledger(r) {
+  return html`${GROUPS.map(([cat, label]) => {
+    const sigs = r.signals.filter(s => s.category === cat).sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || Math.abs(b.points) - Math.abs(a.points));
+    if (!sigs.length) return '';
+    return html`<div class="group"><div class="group-title">${label}</div>${sigs.map(s => signalRow(s))}</div>`;
+  })}`;
+}
+
+function signalRow(s) {
+  const open = s.status === 'fail';
+  const engines = (s.engines || []).map(e => html`<span class="src-chip">${ic(ENGINE_ICON[e] || 'search')}${ENGINE_LABEL[e] || e}</span>`);
+  const pts = s.status === 'unknown' ? '\u2013' : fmtPts(s.points);
+  return html`<div class="row" data-status="${s.status}">
+    <button class="row-btn" aria-expanded="${open}" aria-controls="b-${s.id}">
+      <span class="glyph ${s.status}">${ic(STATUS_ICON[s.status] || 'info')}</span>
+      <span><span class="row-title" style="display:block">${s.title}${s.critical && s.status !== 'pass' ? html`<span class="crit-note">critical</span>` : ''}</span><span class="row-find" style="display:block">${s.finding}</span></span>
+      <span class="row-src">${engines}</span>
+      <span class="impact ${s.status === 'unknown' ? 'zero' : ptsClass(s.points)}">${pts}</span>
+      <span class="chev">${ic('chev')}</span>
+    </button>
+    <div class="row-body ${open ? 'open' : ''}" id="b-${s.id}">
+      ${s.detail && html`<p class="why">${s.detail}</p>`}
+      ${(s.evidence || []).length ? html`<dl class="ev">${s.evidence.map(e => html`<div class="ev-row"><dt>${e.label}</dt><dd>${e.url ? link(e.url, e.value) : e.value}</dd></div>`)}</dl>` : ''}
+    </div>
+  </div>`;
+}
+
+function evidenceBlock(r, p) {
+  const tabs = [];
+  const msg = p.message, url = p.url;
+  if ((msg && msg.text) || (url && url.host)) tabs.push(['xray', 'Message X-ray', panelXray(msg, url)]);
+  if (p.place || (p.near && p.near.length)) tabs.push(['place', 'Business listing', panelPlace(p)]);
+  if (p.prices) tabs.push(['prices', 'Price check', panelPrices(p.prices)]);
+  if (p.jobs && p.jobs.length) tabs.push(['jobs', 'Job postings', panelJobs(p.jobs)]);
+  if (p.web && p.web.length) tabs.push(['web', 'Web pages', panelWeb(p.web)]);
+  if (p.news && p.news.length) tabs.push(['news', 'News', panelNews(p.news)]);
+  if (p.reviews && p.reviews.length) tabs.push(['reviews', 'Lowest-rated reviews', panelReviews(p.reviews)]);
+  if (!tabs.length) return '';
+  const first = (msg && msg.flags && msg.flags.length) ? 'xray' : tabs[0][0];
+  return html`<section class="block" aria-labelledby="evH"><h3 id="evH">The evidence</h3>
+    <p class="sub">The raw material behind the findings, straight from the searches.</p>
+    <div class="ev-tabs"><div class="tabs small" role="tablist" id="evTabs">${tabs.map(([k, l]) => html`
+      <button class="tab" role="tab" data-p="${k}" aria-selected="${k === first}" aria-controls="p-${k}">${l}</button>`)}</div>
+    ${tabs.map(([k, , body]) => html`<div class="panel" id="p-${k}" role="tabpanel" ${k === first ? '' : raw('hidden')}>${body}</div>`)}</div>
+  </section>`;
+}
+
+function panelXray(msg, url) {
+  const parts = [];
+  if (msg && msg.text) {
+    parts.push(html`<div class="xray-grid"><div class="xray-bubble">${xray(msg.text, msg.highlights)}</div>
+      <div class="xray-flags">${msg.flags.length ? msg.flags.map(f => html`
+        <div class="xf ${f.severity}"><b>${f.label}</b><span>${f.why}</span><i>${f.matches.map(m => '\u201c' + m + '\u201d').join('  ')}</i></div>`)
+        : html`<p class="empty-note">No known scam phrases found in this message.</p>`}</div></div>`);
+  }
+  if (url && url.host) {
+    parts.push(html`<div style="margin-top:${msg && msg.text ? 30 : 0}px"><h4 style="font-size:19px;margin-bottom:10px">Web address: ${url.registrable || url.host}</h4>
+      ${url.flags.length ? html`<div class="xray-flags">${url.flags.map(f => html`<div class="xf ${f.points >= 8 ? 'high' : ''}"><b>${f.label}</b><span>${f.why}</span></div>`)}</div>`
+        : html`<p class="empty-note">No warning signs in the address itself.</p>`}</div>`);
+  }
+  return html`${parts}`;
+}
+
+function panelPlace(p) {
+  const pl = p.place;
+  if (!pl) {
+    return html`<p class="empty-note">No Google Maps listing matched this name closely enough.</p>
+      ${p.near && p.near.length ? html`<div class="near">Closest listings found: ${p.near.map(n => `${n.title} (${Math.round(n.match * 100)}% match)`).join('; ')}. These are different businesses.</div>` : ''}`;
+  }
+  const stars = pl.rating ? '\u2605'.repeat(Math.round(pl.rating)) + '\u2606'.repeat(5 - Math.round(pl.rating)) : '';
+  return html`<div class="place">
+    <div><h4>${pl.title}</h4>
+      <div class="stars"><span class="s" aria-hidden="true">${stars}</span>${pl.rating ? `${pl.rating} from ${pl.reviews.toLocaleString('en-IN')} reviews` : 'No rating yet'}</div>
+      <p style="margin-top:10px;color:var(--ink-2)">${pl.type || ''}</p>
+      <p style="margin-top:14px">${link(pl.link, 'Open in Google Maps')}</p></div>
+    <dl class="kv"><div><dt>Address</dt><dd>${pl.address || 'not shown'}</dd></div>
+      <div><dt>Phone</dt><dd>${pl.phone || 'not shown'}</dd></div>
+      <div><dt>Website</dt><dd>${pl.website ? link(pl.website, pl.website.replace(/^https?:\/\/(www\.)?/, '')) : 'not shown'}</dd></div>
+      <div><dt>Name match</dt><dd><span class="flagchip match">${Math.round(pl.match * 100)}%</span></dd></div></dl>
+  </div>`;
+}
+
+function priceChart(p) {
+  const W = 720, H = 242, padL = 30, padR = 30, axisY = 156;
+  const max = Math.max(p.max, p.listed) * 1.07, x = v => padL + (v / max) * (W - padL - padR);
+  const tone = p.ratio < 0.6 ? 'var(--fail)' : p.ratio < 0.8 ? 'var(--warn)' : 'var(--pass)';
+  const clampX = v => Math.min(W - 96, Math.max(96, v));
+  const fmtK = v => v >= 1000 ? Math.round(v / 1000) + 'k' : Math.round(v);
+  const ticks = [0, 1, 2, 3, 4].map(i => (max * i) / 4);
+  const dots = p.items.map((it, i) => `<circle cx="${x(it.price).toFixed(1)}" cy="${axisY + ((i % 3) - 1) * 17}" r="7" fill="#5A6F93" stroke="#fff" stroke-width="2"><title>${esc(it.seller)}: ${esc(fmtINR(it.price))}</title></circle>`).join('');
+  return raw(`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Listed price ${esc(fmtINR(p.listed))} compared with market median ${esc(fmtINR(p.median))}">
+    <rect x="${x(p.q1).toFixed(1)}" y="${axisY - 42}" width="${Math.max(4, x(p.q3) - x(p.q1)).toFixed(1)}" height="84" rx="4" fill="var(--brand-soft)"/>
+    <line x1="${padL}" x2="${W - padR}" y1="${axisY}" y2="${axisY}" stroke="var(--rule-2)"/>
+    ${ticks.map(t => `<line x1="${x(t).toFixed(1)}" x2="${x(t).toFixed(1)}" y1="${axisY + 44}" y2="${axisY + 50}" stroke="var(--rule-2)"/><text x="${x(t).toFixed(1)}" y="${axisY + 64}" font-size="12" text-anchor="middle">\u20b9${fmtK(t)}</text>`).join('')}
+    <line x1="${x(p.median).toFixed(1)}" x2="${x(p.median).toFixed(1)}" y1="62" y2="${axisY + 44}" stroke="var(--brand)" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="${clampX(x(p.median)).toFixed(1)}" y="22" font-size="13" text-anchor="middle" class="lbl-strong">Market median ${esc(fmtINR(p.median))}</text>
+    ${dots}
+    <line x1="${x(p.listed).toFixed(1)}" x2="${x(p.listed).toFixed(1)}" y1="84" y2="${axisY + 44}" stroke="${tone}" stroke-width="3"/>
+    <circle cx="${x(p.listed).toFixed(1)}" cy="${axisY}" r="10" fill="${tone}" stroke="#fff" stroke-width="3"/>
+    <text x="${clampX(x(p.listed)).toFixed(1)}" y="64" font-size="14" text-anchor="middle" class="lbl-strong" style="fill:${tone}">You were shown ${esc(fmtINR(p.listed))}</text>
+  </svg>`);
+}
+
+function panelPrices(pr) {
+  const pct = Math.round(Math.abs(1 - pr.ratio) * 100);
+  return html`<p style="font-size:17px;max-width:70ch">The listed price is <b>${pct}% ${pr.ratio < 1 ? 'below' : 'above'}</b> the median of ${pr.items.length} sellers on Google Shopping.</p>
+    ${priceChart(pr)}
+    <div class="chart-legend"><span><i style="background:#5A6F93"></i>Seller price</span><span><i style="background:var(--brand-soft);border:1px solid var(--brand)"></i>Middle half of prices</span><span><i style="background:var(--brand)"></i>Median</span><span><i style="background:${pr.ratio < 0.6 ? 'var(--fail)' : pr.ratio < 0.8 ? 'var(--warn)' : 'var(--pass)'}"></i>Price you were shown</span></div>
+    <div class="list" style="margin-top:22px">${pr.items.slice(0, 8).map(i => html`<div class="item" style="grid-template-columns:1fr auto;gap:12px"><span>${i.link ? link(i.link, i.seller) : i.seller}</span><b>${fmtINR(i.price)}</b></div>`)}</div>`;
+}
+
+function panelJobs(jobs) {
+  return html`<div class="list">${jobs.map(j => html`<div class="item">
+    <div class="item-title">${j.link ? link(j.link, j.title) : j.title}</div>
+    <div class="item-meta"><span>${j.company || 'Unknown company'}</span>${j.location && html`<span>${j.location}</span>`}${j.via && html`<span>${j.via}</span>`}${j.posted && html`<span>${j.posted}</span>`}
+      ${j.from_company ? html`<span class="flagchip match">Posted by this company</span>` : html`<span class="flagchip weak">Different employer</span>`}</div></div>`)}</div>`;
+}
+function panelWeb(items) {
+  return html`<div class="list">${items.map(i => html`<div class="item">
+    <div class="item-title">${link(i.link, i.title)}</div>
+    <div class="item-meta"><span>${i.host}</span><span>${i.kind}</span>
+      ${i.flag === 'strong' && html`<span class="flagchip strong">Scam or fraud report</span>`}${i.flag === 'weak' && html`<span class="flagchip weak">Complaints</span>`}${i.official && html`<span class="flagchip official">Official site</span>`}</div>
+    <p class="item-snip">${highlightTerms(i.snippet, i.terms)}</p></div>`)}</div>`;
+}
+function panelNews(items) {
+  return html`<div class="list">${items.map(i => html`<div class="item">
+    <div class="item-title">${i.link ? link(i.link, i.title) : i.title}</div>
+    <div class="item-meta"><span>${i.source || 'News'}</span>${i.date && html`<span>${i.date}</span>`}
+      ${i.tone !== 'neutral' && html`<span class="flagchip ${i.tone}">${i.tone === 'negative' ? 'Negative' : 'Positive'}</span>`}</div>
+    ${i.snippet && html`<p class="item-snip">${i.snippet}</p>`}</div>`)}</div>`;
+}
+function panelReviews(items) {
+  return html`<p style="color:var(--ink-2);margin-bottom:8px">TrustLens asked Google Maps for the lowest-rated reviews first, because that is where honest warnings live.</p>
+  <div class="list">${items.map(i => html`<div class="item">
+    <div class="item-meta"><span style="color:#E0A100;letter-spacing:2px">${'\u2605'.repeat(i.rating || 0)}${'\u2606'.repeat(5 - (i.rating || 0))}</span><span>${i.user || 'Anonymous'}</span><span>${i.date || ''}</span>
+      ${i.terms && i.terms.length ? html`<span class="flagchip strong">Serious complaint</span>` : ''}</div>
+    <p class="item-snip">${highlightTerms(i.text, i.terms)}</p></div>`)}</div>`;
+}
+
+function summaryText(r) {
+  return `TrustLens check for ${r.entity}: ${r.verdict.label} (${r.score}/100). ${r.verdict.headline} ${r.summary} Checked ${fmtDate(r.generated_at)}. Advisory only: verify independently before paying.`;
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch { } ta.remove(); }
+  toast('Summary copied');
+}
+function bindGlobal() {
+  $('#checker').addEventListener('submit', e => { e.preventDefault(); run(); });
+  $('#demoSwitch').addEventListener('change', e => { state.forceDemo = e.target.checked; updateCost(); });
+  $('#clearHistory').addEventListener('click', () => { saveHistoryList([]); renderHistory(); toast('History cleared'); });
+  document.addEventListener('click', e => {
+    const act = e.target.closest('[data-act]'); const r = state.report;
+    if (act && r) {
+      const a = act.dataset.act;
+      if (a === 'copy') copyText(summaryText(r));
+      if (a === 'wa') window.open('https://wa.me/?text=' + encodeURIComponent(summaryText(r)), '_blank', 'noopener');
+      if (a === 'print') window.print();
+      if (a === 'json') {
+        const blob = new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' });
+        const a2 = document.createElement('a'); a2.href = URL.createObjectURL(blob); a2.download = `trustlens-${r.id}.json`; a2.click(); URL.revokeObjectURL(a2.href);
+      }
+    }
+    const rb = e.target.closest('.row-btn');
+    if (rb) { const open = rb.getAttribute('aria-expanded') === 'true'; rb.setAttribute('aria-expanded', String(!open)); $('#' + rb.getAttribute('aria-controls')).classList.toggle('open', !open); }
+    const f = e.target.closest('.filter'); if (f) applyFilter(f.dataset.f);
+    const pt = e.target.closest('#evTabs .tab');
+    if (pt) { $$('#evTabs .tab').forEach(t => t.setAttribute('aria-selected', String(t === pt))); $$('.ev-tabs .panel').forEach(p => { p.hidden = p.id !== 'p-' + pt.dataset.p; }); }
+    const st = e.target.closest('#scoreTabs .tab'); if (st) renderScoring(st.dataset.m);
+  });
+}
+function applyFilter(f) {
+  $$('#filters .filter').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === f)));
+  const show = s => f === 'all' || (f === 'pass' ? (s === 'pass' || s === 'info') : s === f);
+  $$('#ledger .row').forEach(r => { r.hidden = !show(r.dataset.status); });
+  $$('#ledger .group').forEach(g => { g.hidden = !$$('.row', g).some(r => !r.hidden); });
+}
+
+function renderSources() { mount($('#sourceList'), html`${SOURCES.map(s => html`<li><span class="src-ic">${ic(s.icon)}</span><h3>${s.title}</h3><p>${s.body}</p></li>`)}`); }
+function renderHow() { mount($('#howSteps'), html`${HOW.map(([t, b]) => html`<li><h3>${t}</h3><p>${b}</p></li>`)}`); }
+function renderScoring(mode) {
+  const tabs = $('#scoreTabs');
+  mount(tabs, html`${Object.entries(MODES).map(([k, m]) => html`<button class="tab" role="tab" data-m="${k}" aria-selected="${k === mode}">${ic(m.icon)}${m.label}</button>`)}`);
+  mount($('#scoreTable'), html`<thead><tr><th>Check</th><th>Source</th><th>Best case</th><th>Worst case</th><th>What it looks at</th></tr></thead>
+    <tbody>${SCORING[mode].map(([t, s, best, worst, d]) => html`<tr><td><b>${t}</b></td><td>${s}</td><td class="n pos">${fmtPts(best)}</td><td class="n neg">${fmtPts(worst)}</td><td>${d}</td></tr>`)}</tbody>`);
+  mount($('#scoreRules'), html`
+    <div><h4>Start at 50</h4><p>Scores are kept between 3 and 97, because public search can never prove anything absolutely.</p></div>
+    <div><h4>Verdict bands</h4><p>72 or more looks legitimate. 45 to 71 means proceed with caution. Below 45 is high risk.</p></div>
+    <div><h4>Safety rules</h4><p>Critical findings, such as a fee request or a bait price, cap the verdict at caution even if everything else looks good. A low score caused only by missing data becomes "Not enough evidence", never "High risk".</p></div>`);
+}
+function renderCases() {
+  const list = $('#caseList');
+  if (!state.samples.length) { mount(list, html`<p class="empty">Recorded cases are not available in this build.</p>`); return; }
+  mount(list, html`${state.samples.map(s => html`<div class="case">
+    <span class="m-ic">${ic(MODES[s.mode].icon)}</span><div><h3>${s.title}</h3><p>${s.blurb}</p></div>
+    <span class="outcome ${s.expected}"><i></i>Recorded outcome: ${VERDICT_LABEL[s.expected]}</span>
+    <button class="btn small" data-case="${s.id}">${ic('play')}Run this case</button></div>`)}`);
+  list.onclick = e => { const b = e.target.closest('[data-case]'); if (b) { applySample(state.samples.find(s => s.id === b.dataset.case)); run(); } };
+}
+function renderSpecimen() {
+  const el = $('#specimenText');
+  mount(el, html`${SPECIMEN.map(p => typeof p === 'string' ? p : html`<span class="hl">${p.t}</span><span class="hl-tag">${p.tag}</span>`)}`);
+  const hls = $$('.hl', el), tags = $$('.hl-tag', el), stamp = $('.mini-stamp');
+  (async () => {
+    await sleep(reduced ? 0 : 700);
+    for (let i = 0; i < hls.length; i++) { hls[i].classList.add('on'); await sleep(reduced ? 0 : 380); tags[i].classList.add('on'); await sleep(reduced ? 0 : 420); }
+    stamp.classList.add('on');
+  })();
+}
+
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HKEY) || '[]'); } catch { return []; } }
+function saveHistoryList(list) {
+  try { localStorage.setItem(HKEY, JSON.stringify(list.slice(0, 10))); }
+  catch { try { localStorage.setItem(HKEY, JSON.stringify(list.slice(0, 3))); } catch { } }
+}
+function saveHistory(r) {
+  const list = loadHistory().filter(h => h.id !== r.id);
+  list.unshift({ id: r.id, at: r.generated_at, entity: r.entity, mode: r.mode_label, score: r.score, level: r.verdict.level, report: r });
+  saveHistoryList(list);
+}
+function renderHistory() {
+  const list = loadHistory(), box = $('#historyList');
+  $('#clearHistory').hidden = !list.length;
+  if (!list.length) { mount(box, html`<p class="empty">Your checks will appear here after you run one.</p>`); return; }
+  mount(box, html`${list.map(h => html`<div class="h-row">
+    <span class="h-score ${h.level}">${h.score}</span>
+    <div><b>${h.entity}</b><span class="sm">${h.mode}, ${VERDICT_LABEL[h.level]}, ${fmtDate(h.at)}</span></div>
+    <button class="btn small" data-open="${h.id}">Open report</button>
+    <button class="btn small quiet" data-del="${h.id}" aria-label="Delete this check">${ic('trash')}</button></div>`)}`);
+  box.onclick = e => {
+    const o = e.target.closest('[data-open]'), d = e.target.closest('[data-del]');
+    if (o) { const h = loadHistory().find(x => x.id === o.dataset.open); if (h && h.report) { state.report = h.report; $('#report').hidden = false; $('#traceMount').innerHTML = ''; renderReport(h.report); } }
+    if (d) { saveHistoryList(loadHistory().filter(x => x.id !== d.dataset.del)); renderHistory(); }
+  };
+}
+
+init();
+})();
+</script>
+</body>
+</html>
